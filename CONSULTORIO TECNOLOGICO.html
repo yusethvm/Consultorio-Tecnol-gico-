@@ -1,0 +1,2728 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultorio Tecnológico Multimoneda</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Librerías para Exportar/Importar Excel y PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        .bg-gradient-blue { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); }
+        .bg-gradient-sidebar-green { background: linear-gradient(180deg, #065f46 0%, #047857 50%, #064e3b 100%); }
+        .bg-gradient-card-blue { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); }
+        .bg-gradient-card-emerald { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); }
+        .bg-gradient-card-rose { background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%); }
+        .bg-gradient-card-indigo { background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%); }
+        .bg-gradient-card-amber { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); }
+        #ticketPrintArea, #reportPrintArea, #reportVesPrintArea { display: none; }
+        
+        @page { size: auto; margin: 0; }
+        @media print {
+            body * { visibility: hidden !important; }
+            #ticketPrintArea:not(.hidden), #ticketPrintArea:not(.hidden) *,
+            #reportPrintArea:not(.hidden), #reportPrintArea:not(.hidden) *,
+            #reportVesPrintArea:not(.hidden), #reportVesPrintArea:not(.hidden) * { visibility: visible !important; }
+            #ticketPrintArea, #reportPrintArea, #reportVesPrintArea { display: block !important; position: absolute; top: 0; left: 0; width: 100% !important; margin: 0 !important; padding: 10px !important; background: white !important; }
+            #ticketPrintArea table, #reportVesPrintArea table { display: table !important; width: 100% !important; border-collapse: collapse !important; }
+            #ticketPrintArea tr, #reportVesPrintArea tr { display: table-row !important; }
+            #ticketPrintArea th, #ticketPrintArea td, #reportVesPrintArea th, #reportVesPrintArea td { display: table-cell !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800" onload="loadData()">
+
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="hidden md:flex md:flex-shrink-0">
+            <div class="flex flex-col w-64 bg-gradient-sidebar-green border-r border-emerald-900 shadow-xl">
+                <!-- Logo -->
+                <div class="flex items-center justify-center h-32 bg-emerald-950/70 border-b border-emerald-800/60 px-4 py-3">
+                    <div class="flex flex-col items-center gap-1.5 w-full text-center">
+                        <img src="logo.png" onerror="this.onerror=null; this.src='https://via.placeholder.com/96/10b981/ffffff?text=CT';" alt="Logo" class="w-24 h-24 object-contain rounded-2xl shadow-lg border-2 border-emerald-400/40 bg-emerald-900/50 p-1">
+                        <div class="overflow-hidden">
+                            <span class="text-white font-black text-xs uppercase block leading-tight truncate">Consultorio Tecnológico</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex flex-col flex-grow px-3 py-6 space-y-1.5 overflow-y-auto">
+                    <button onclick="switchTab(event, 'bcv')" class="nav-btn w-full flex items-center px-4 py-2.5 text-sm font-medium text-white bg-emerald-600 rounded-lg shadow-md transition-all">💱 Tasa BCV & Historial</button>
+                    <button onclick="switchTab(event, 'sales')" class="nav-btn w-full flex items-center px-4 py-2.5 text-sm font-medium text-emerald-100 hover:bg-emerald-900/60 hover:text-white rounded-lg transition-all">🛍️ Ventas & POS</button>
+                    <button onclick="switchTab(event, 'inventory')" class="nav-btn w-full flex items-center px-4 py-2.5 text-sm font-medium text-emerald-100 hover:bg-emerald-900/60 hover:text-white rounded-lg transition-all">📦 Inventario</button>
+                    <button onclick="switchTab(event, 'contacts')" class="nav-btn w-full flex items-center px-4 py-2.5 text-sm font-medium text-emerald-100 hover:bg-emerald-900/60 hover:text-white rounded-lg transition-all">👥 Clientes & Proveedores</button>
+                    <button onclick="switchTab(event, 'purchases')" class="nav-btn w-full flex items-center px-4 py-2.5 text-sm font-medium text-emerald-100 hover:bg-emerald-900/60 hover:text-white rounded-lg transition-all">🛒 Compras</button>
+                    <button onclick="switchTab(event, 'receivables')" class="nav-btn w-full flex items-center px-4 py-2.5 text-sm font-medium text-emerald-100 hover:bg-emerald-900/60 hover:text-white rounded-lg transition-all">📑 Cuentas por Cobrar</button>
+                    <button onclick="switchTab(event, 'payables')" class="nav-btn w-full flex items-center px-4 py-2.5 text-sm font-medium text-emerald-100 hover:bg-emerald-900/60 hover:text-white rounded-lg transition-all">📋 Cuentas por Pagar</button>
+                    <button onclick="switchTab(event, 'expenses')" class="nav-btn w-full flex items-center px-4 py-2.5 text-sm font-medium text-emerald-100 hover:bg-emerald-900/60 hover:text-white rounded-lg transition-all">💼 Gastos</button>
+                    <button onclick="switchTab(event, 'reportUSD')" class="nav-btn w-full flex items-center px-4 py-2.5 text-sm font-medium text-emerald-100 hover:bg-emerald-900/60 hover:text-white rounded-lg transition-all">📄 Reporte Ventas ($)</button>
+                    <button onclick="switchTab(event, 'reportVES')" class="nav-btn w-full flex items-center px-4 py-2.5 text-sm font-medium text-emerald-100 hover:bg-emerald-900/60 hover:text-white rounded-lg transition-all">📄 Reporte Ventas (Bs.)</button>
+                    <button onclick="switchTab(event, 'dashboard')" class="nav-btn w-full flex items-center px-4 py-2.5 text-sm font-medium text-emerald-100 hover:bg-emerald-900/60 hover:text-white rounded-lg transition-all">📊 Dashboard General</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Area -->
+        <div class="flex flex-col flex-1 overflow-y-auto bg-slate-50">
+            <header class="flex items-center justify-between h-16 bg-white border-b border-slate-200 px-6 shadow-sm">
+                <div class="flex items-center gap-4">
+                    <h1 id="pageTitle" class="text-xl font-extrabold text-slate-800">SISTEMA DE CONTROL DE COMPRAS, VENTAS, INVENTARIO, GASTOS Y FINANZAS MULTIMONEDA</h1>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <span id="bcvBadge" class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-3 py-1.5 rounded-full shadow-sm">Tasa BCV: Bs. 877.90 / $</span>
+                    <button onclick="exportAllDataAsTxt()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition shadow flex items-center gap-1">💾 Guardar Datos (.txt)</button>
+                    <button onclick="document.getElementById('fileInputRestore').click()" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition shadow flex items-center gap-1">📂 Restaurar Datos</button>
+                    <input type="file" id="fileInputRestore" accept=".txt,.json" class="hidden" onchange="importDataFromFile(event)">
+                    <button onclick="resetData()" class="text-xs text-rose-500 hover:text-rose-700 hover:underline font-medium">Restablecer Fábrica</button>
+                </div>
+            </header>
+
+            <main class="p-6 space-y-6">
+                <!-- MÓDULO TASA BCV & HISTORIAL -->
+                <div id="tab-bcv" class="tab-content space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                            <h2 class="text-base font-bold text-slate-900 mb-4">💱 Sincronizar o Actualizar Tasa BCV</h2>
+                            <div class="mb-4">
+                                <button type="button" onclick="fetchOfficialBCVRate(true)" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl shadow transition text-sm flex items-center justify-center gap-2">🌐 Consultar Tasa Oficial BCV Web</button>
+                            </div>
+                            <form onsubmit="saveBCVHistory(event)" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha de la Tasa</label>
+                                    <input type="date" id="bcvHistDate" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Tasa del Día (Bs/$)</label>
+                                    <input type="number" id="bcvHistRate" step="0.01" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600" placeholder="Ej. 877.90">
+                                </div>
+                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl shadow transition text-sm">Guardar Tasa en Historial</button>
+                            </form>
+                        </div>
+                        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm lg:col-span-2">
+                            <h2 class="text-base font-bold text-slate-900 mb-4">📈 Historial de Tasas BCV Registradas</h2>
+                            <div class="overflow-x-auto max-h-[450px] rounded-xl border border-slate-100">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gradient-blue text-white text-xs uppercase">
+                                            <th class="p-3">Fecha</th>
+                                            <th class="p-3 text-right">Tasa Aplicada (Bs / $)</th>
+                                            <th class="p-3 text-center">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="bcvHistoryTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REPORTE EN DÓLARES ($) -->
+                <div id="tab-reportUSD" class="tab-content space-y-6 hidden">
+                    <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <div>
+                                <h2 class="text-base font-bold text-slate-900">📄 Reporte Consolidado de Ventas en Dólares ($)</h2>
+                                <p class="text-xs text-slate-500">Reporte exclusivo en divisa estadounidense ($).</p>
+                            </div>
+                            <div class="flex items-center gap-2 w-full sm:w-auto">
+                                <input type="text" id="searchReportUSDInput" oninput="renderReportUSD()" placeholder="🔍 Buscar por cliente..." class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600 w-full sm:w-64">
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto max-h-[550px] rounded-xl border border-slate-100">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gradient-blue text-white text-xs uppercase">
+                                        <th class="p-3">Fecha</th>
+                                        <th class="p-3">Cliente</th>
+                                        <th class="p-3">Detalle / Productos</th>
+                                        <th class="p-3 text-right">Monto Total ($)</th>
+                                        <th class="p-3 text-center">Acción / Imprimir Formato</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reportUSDTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REPORTE EN BOLÍVARES (Bs.) CON GENERADOR MANUAL -->
+                <div id="tab-reportVES" class="tab-content space-y-6 hidden">
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 shadow-sm space-y-4">
+                        <h2 class="text-base font-bold text-emerald-900">💱 Generador Rápido de Reporte en Bs. (Tasa y Fecha Manuales)</h2>
+                        <p class="text-xs text-emerald-700">Selecciona una venta del historial, ingresa la tasa del dólar e introduce la fecha que desees para imprimir el reporte.</p>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2">
+                            <div>
+                                <label class="block text-xs font-semibold text-emerald-800 mb-1">Fecha del Reporte</label>
+                                <input type="date" id="manualVesDate" class="w-full bg-white border border-emerald-300 rounded-xl p-2.5 text-sm font-bold text-emerald-900 focus:outline-none focus:border-emerald-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-emerald-800 mb-1">Tasa del $ (BCV)</label>
+                                <input type="number" id="manualVesRate" step="0.01" placeholder="Ej. 5000.00" class="w-full bg-white border border-emerald-300 rounded-xl p-2.5 text-sm font-bold text-emerald-900 focus:outline-none focus:border-emerald-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-emerald-800 mb-1">Seleccionar Venta del Historial</label>
+                                <select id="manualVesSaleSelect" class="w-full bg-white border border-emerald-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-emerald-600"></select>
+                            </div>
+                            <div class="flex items-end gap-2">
+                                <button type="button" onclick="fetchManualVesRateWeb()" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold px-3 py-2.5 rounded-xl shadow transition">🌐 Tasa Web</button>
+                                <button type="button" onclick="printCustomManualVesReport()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-3 rounded-xl shadow transition text-sm flex items-center justify-center gap-1">🖨️ Imprimir</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <div>
+                                <h2 class="text-base font-bold text-slate-900">📄 Historial de Ventas Reales (Bs.)</h2>
+                                <p class="text-xs text-slate-500">Registros del sistema convertidos a la tasa oficial del día.</p>
+                            </div>
+                            <div class="flex items-center gap-2 w-full sm:w-auto">
+                                <input type="text" id="searchReportVESInput" oninput="renderReportVES()" placeholder="🔍 Buscar por cliente..." class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600 w-full sm:w-64">
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto max-h-[550px] rounded-xl border border-slate-100">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gradient-blue text-white text-xs uppercase">
+                                        <th class="p-3">Fecha / Tasa BCV</th>
+                                        <th class="p-3">Cliente</th>
+                                        <th class="p-3">Detalle / Productos</th>
+                                        <th class="p-3 text-right">Monto Total (Bs.)</th>
+                                        <th class="p-3 text-center">Acción / Imprimir Formato</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reportVESTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1. DASHBOARD TAB -->
+                <div id="tab-dashboard" class="tab-content space-y-6 hidden">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-sm gap-3">
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900">📊 Consulta Financiera Consolidada</h2>
+                            <p class="text-xs text-slate-500">Selecciona el rango de tiempo para calcular los balances y la utilidad.</p>
+                        </div>
+                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <label class="text-xs font-semibold text-slate-600">Período:</label>
+                            <select id="dashboardPeriodSelect" onchange="renderDashboard()" class="bg-slate-50 border border-slate-300 rounded-xl p-2 text-sm font-semibold focus:outline-none focus:border-blue-600">
+                                <option value="DAILY" selected>Hoy (Diario)</option>
+                                <option value="WEEKLY">Últimos 7 Días (Semanal)</option>
+                                <option value="MONTHLY">Este Mes (Mensual)</option>
+                                <option value="ALL">Todo el Histórico</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="bg-gradient-card-emerald border border-emerald-200/60 p-5 rounded-2xl shadow-sm hover:shadow transition">
+                            <p class="text-xs font-bold text-emerald-800 uppercase tracking-wider">📈 Ventas Totales</p>
+                            <p id="kpiSalesUSD" class="text-2xl font-black text-slate-900 mt-2">$0.00</p>
+                            <p id="kpiSalesVES" class="text-sm font-semibold text-emerald-700 mt-1">Bs. 0.00</p>
+                        </div>
+                        <div class="bg-gradient-card-blue border border-blue-200/60 p-5 rounded-2xl shadow-sm hover:shadow transition">
+                            <p class="text-xs font-bold text-blue-800 uppercase tracking-wider">📦 Compras Totales</p>
+                            <p id="kpiPurchasesUSD" class="text-2xl font-black text-slate-900 mt-2">$0.00</p>
+                            <p id="kpiPurchasesVES" class="text-sm font-semibold text-blue-700 mt-1">Bs. 0.00</p>
+                        </div>
+                        <div class="bg-gradient-card-rose border border-rose-200/60 p-5 rounded-2xl shadow-sm hover:shadow transition">
+                            <p class="text-xs font-bold text-rose-800 uppercase tracking-wider">💸 Gastos Operativos</p>
+                            <p id="kpiExpensesUSD" class="text-2xl font-black text-slate-900 mt-2">$0.00</p>
+                            <p id="kpiExpensesVES" class="text-sm font-semibold text-rose-700 mt-1">Bs. 0.00</p>
+                        </div>
+                        <div class="bg-gradient-card-indigo border border-indigo-200/60 p-5 rounded-2xl shadow-sm hover:shadow transition">
+                            <p class="text-xs font-bold text-indigo-800 uppercase tracking-wider">💎 Utilidad Neta</p>
+                            <p id="kpiNetUSD" class="text-2xl font-black text-slate-900 mt-2">$0.00</p>
+                            <p id="kpiNetVES" class="text-sm font-semibold text-indigo-700 mt-1">Bs. 0.00</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
+                        <h2 class="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">📊 Comparativo Financiero del Período Seleccionado</h2>
+                        <div class="h-80 flex items-center justify-center">
+                            <canvas id="financialChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. SALES TAB (POS) -->
+                <div id="tab-sales" class="tab-content space-y-6 hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm lg:col-span-1">
+                            <h2 class="text-base font-bold text-slate-900 mb-4">🛒 Registrar Nueva Venta (POS)</h2>
+                            <form id="saleForm" onsubmit="processSale(event)" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha de Registro</label>
+                                    <input type="date" id="saleDateInput" onchange="renderCart()" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                </div>
+                                <div>
+                                    <div class="flex justify-between items-center mb-1">
+                                        <label class="block text-xs font-semibold text-slate-600">Cliente</label>
+                                        <button type="button" onclick="openQuickClientModal()" class="text-xs text-blue-600 hover:text-blue-800 font-bold">➕ Nuevo Cliente</button>
+                                    </div>
+                                    <select id="saleClient" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600"></select>
+                                </div>
+                                <div class="border-t border-slate-200 pt-3 space-y-3">
+                                    <h3 class="text-xs font-bold text-slate-700 uppercase">Agregar Productos al Carrito</h3>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 mb-1">Buscar / Seleccionar Producto</label>
+                                        <input type="text" id="saleProductInput" list="saleProductsList" oninput="onSaleProductInputChanged()" placeholder="Escribe para buscar..." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                        <datalist id="saleProductsList"></datalist>
+                                        <!-- Indicador visual en tiempo real de stock disponible -->
+                                        <span id="posStockIndicator" class="text-xs font-semibold text-slate-500 mt-1 block"></span>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-600 mb-1">Cantidad</label>
+                                            <div class="flex items-center border border-slate-300 bg-slate-50 rounded-xl overflow-hidden">
+                                                <button type="button" onclick="adjustSaleQty(-1)" class="px-3 py-2.5 bg-slate-200 text-slate-700 font-bold hover:bg-slate-300 transition">-</button>
+                                                <input type="number" id="saleQty" min="1" value="1" class="w-full text-center bg-transparent p-2 text-sm focus:outline-none font-bold">
+                                                <button type="button" onclick="adjustSaleQty(1)" class="px-3 py-2.5 bg-slate-200 text-slate-700 font-bold hover:bg-slate-300 transition">+</button>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-600 mb-1">Precio Unit. ($)</label>
+                                            <input type="number" id="salePriceUSD" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                        </div>
+                                    </div>
+                                    <button type="button" onclick="addCartItem()" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2.5 rounded-xl transition">➕ Añadir Producto a la Venta</button>
+                                </div>
+
+                                <div class="overflow-x-auto max-h-40 border border-slate-200 rounded-xl">
+                                    <table class="w-full text-left border-collapse text-xs">
+                                        <thead>
+                                            <tr class="bg-blue-50 text-blue-900">
+                                                <th class="p-2">Prod</th>
+                                                <th class="p-2 text-center">Cant</th>
+                                                <th class="p-2 text-right">Subtotal</th>
+                                                <th class="p-2 text-center">X</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="cartTableBody">
+                                            <tr><td colspan="4" class="p-3 text-center text-slate-400">Carrito vacío</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Medio de Pago</label>
+                                    <select id="salePaymentMethod" onchange="togglePaymentFields()" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                        <option value="EFECTIVO">Efectivo</option>
+                                        <option value="TARJETA DEBITO">Tarjeta Débito</option>
+                                        <option value="TARJETA CREDITO">Tarjeta Crédito</option>
+                                        <option value="ZELLE">Zelle</option>
+                                        <option value="PAGO MOVIL">Pago Móvil</option>
+                                        <option value="ABONO">Abono (Parcial)</option>
+                                        <option value="CREDITO">Crédito (Por Cobrar)</option>
+                                    </select>
+                                </div>
+                                <div id="abonoFieldContainer" class="hidden">
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Monto Abonado ($)</label>
+                                    <input type="number" id="saleAbonoAmount" step="0.01" value="0.00" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600" placeholder="Ej. 10.00">
+                                </div>
+                                <div class="bg-blue-50/70 p-3.5 rounded-xl border border-blue-100 text-sm space-y-1">
+                                    <div class="flex justify-between font-medium"><span>Total USD:</span><strong id="previewTotalUSD" class="text-blue-700 font-bold">$0.00</strong></div>
+                                    <div class="flex justify-between font-medium"><span>Total Bs:</span><strong id="previewTotalVES" class="text-emerald-600 font-bold">Bs. 0.00</strong></div>
+                                </div>
+                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl shadow transition">Procesar Venta</button>
+                            </form>
+                        </div>
+                        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm lg:col-span-2 space-y-4">
+                            <div class="flex justify-between items-center">
+                                <h2 class="text-base font-bold text-slate-900">📋 Historial de Ventas</h2>
+                                <button type="button" id="toggleSalesHistoryBtn" onclick="toggleAllSalesHistory()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition">Ver Historial Completo</button>
+                            </div>
+                            <div class="overflow-x-auto max-h-[450px] rounded-xl border border-slate-100">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gradient-blue text-white text-xs uppercase">
+                                            <th class="p-3">Fecha / Tasa</th>
+                                            <th class="p-3">Cliente</th>
+                                            <th class="p-3">Productos & Precio Unit.</th>
+                                            <th class="p-3 text-right">Sub Total ($ / Bs)</th>
+                                            <th class="p-3">Pago</th>
+                                            <th class="p-3 text-right">Total ($ / Bs)</th>
+                                            <th class="p-3 text-center">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="salesTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. CUENTAS POR COBRAR TAB -->
+                <div id="tab-receivables" class="tab-content space-y-6 hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="bg-amber-50/60 border border-amber-200/80 p-5 rounded-2xl shadow-sm lg:col-span-1 space-y-4">
+                            <h2 class="text-base font-bold text-amber-900">📑 Registrar Abono / Pago</h2>
+                            <form onsubmit="processReceivablePayment(event)" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-amber-800 mb-1">Seleccionar Deuda Pendiente</label>
+                                    <select id="recDebtSelect" required class="w-full bg-white border border-amber-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-amber-600"></select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-amber-800 mb-1">Monto a Abonar ($)</label>
+                                    <input type="number" id="recPaymentAmount" step="0.01" required class="w-full bg-white border border-amber-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-amber-600" placeholder="0.00">
+                                </div>
+                                <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2.5 rounded-xl shadow transition text-sm">Registrar Abono</button>
+                            </form>
+                        </div>
+                        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm lg:col-span-2">
+                            <h2 class="text-base font-bold text-slate-900 mb-4">📑 Listado de Cuentas por Cobrar (Créditos Activos)</h2>
+                            <div class="overflow-x-auto max-h-[450px] rounded-xl border border-slate-100">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gradient-blue text-white text-xs uppercase">
+                                            <th class="p-3">Fecha / Tasa</th>
+                                            <th class="p-3">Cliente</th>
+                                            <th class="p-3 text-right">Total ($ / Bs)</th>
+                                            <th class="p-3 text-right">Pagado ($ / Bs)</th>
+                                            <th class="p-3 text-right">Pendiente ($ / Bs)</th>
+                                            <th class="p-3 text-center">Estado</th>
+                                            <th class="p-3 text-center">Imprimir Comprobante</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="receivablesTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. INVENTORY TAB -->
+                <div id="tab-inventory" class="tab-content space-y-6 hidden">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="bg-gradient-card-blue border border-blue-200/60 p-4 rounded-2xl shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-bold text-blue-800 uppercase tracking-wider">📦 Total Costo en Inventario</p>
+                                <p id="invTotalCostUSD" class="text-xl font-black text-slate-900 mt-1">$0.00</p>
+                                <p id="invTotalCostVES" class="text-xs font-semibold text-blue-700 mt-0.5">Bs. 0.00</p>
+                            </div>
+                            <span class="text-3xl">💰</span>
+                        </div>
+                        <div class="bg-gradient-card-emerald border border-emerald-200/60 p-4 rounded-2xl shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-bold text-emerald-800 uppercase tracking-wider">🏷️ Total Precio en Inventario</p>
+                                <p id="invTotalPriceUSD" class="text-xl font-black text-slate-900 mt-1">$0.00</p>
+                                <p id="invTotalPriceVES" class="text-xs font-semibold text-emerald-700 mt-0.5">Bs. 0.00</p>
+                            </div>
+                            <span class="text-3xl">💲</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-sm">📥 Herramientas de Carga Masiva de Productos (Excel)</h3>
+                            <p class="text-xs text-slate-500">Descarga la plantilla oficial, llénala con tus productos y súbela para cargarlos todos juntos.</p>
+                        </div>
+                        <div class="flex gap-2 w-full sm:w-auto">
+                            <button onclick="downloadInventoryTemplate()" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow transition flex items-center justify-center gap-1.5">⬇️ Descargar Plantilla Excel</button>
+                            <button onclick="document.getElementById('excelUploadInput').click()" class="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow transition flex items-center justify-center gap-1.5">📤 Cargar Archivo Excel</button>
+                            <input type="file" id="excelUploadInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelUpload(event)">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="space-y-6">
+                            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                <h2 class="text-base font-bold text-slate-900 mb-3">🏷️ Gestión de Categorías</h2>
+                                <form onsubmit="saveCategory(event)" class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 mb-1">Nueva Categoría</label>
+                                        <div class="flex gap-2">
+                                            <input type="text" id="newCategoryInput" required class="flex-1 bg-slate-50 border border-slate-300 rounded-xl p-2 text-sm focus:outline-none focus:border-blue-600" placeholder="Ej. HARDWARE">
+                                            <button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-semibold px-3.5 py-2 rounded-xl text-xs shadow transition">Añadir</button>
+                                        </div>
+                                    </div>
+                                </form>
+                                <div class="mt-3 max-h-32 overflow-y-auto border border-slate-100 rounded-xl p-2 bg-slate-50">
+                                    <div id="categoryListContainer" class="flex flex-wrap gap-1.5"></div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                <h2 id="invFormTitle" class="text-base font-bold text-slate-900 mb-4">📦 Nuevo Producto / Servicio</h2>
+                                <form id="inventoryForm" onsubmit="saveProduct(event)" class="space-y-4">
+                                    <input type="hidden" id="prodIndex" value="">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 mb-1">Nombre del Producto / Servicio</label>
+                                        <input type="text" id="prodName" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600" placeholder="Ej. Licencia Antivirus / Mantenimiento">
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-600 mb-1">Categoría</label>
+                                            <select id="prodCategory" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                                <option value="" disabled selected>Seleccione...</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-600 mb-1">Stock Actual</label>
+                                            <input type="number" id="prodStock" min="0" placeholder="Ej. 10" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-600 mb-1">Costo ($)</label>
+                                            <input type="number" id="prodCost" step="0.01" oninput="calcProdBsPreview()" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600" placeholder="0.00">
+                                            <span id="previewCostBs" class="text-[11px] text-slate-500 mt-0.5 block">Bs. 0.00</span>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-600 mb-1">Precio Venta ($)</label>
+                                            <input type="number" id="prodPrice" step="0.01" oninput="calcProdBsPreview()" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600" placeholder="0.00">
+                                            <span id="previewPriceBs" class="text-[11px] text-slate-500 mt-0.5 block">Bs. 0.00</span>
+                                        </div>
+                                    </div>
+                                    <!-- CONTROL DE STOCK BAJO PERSONALIZADO -->
+                                    <div class="border-t border-slate-200 pt-3 space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-xs font-semibold text-slate-700">⚠️ Control de Stock Bajo</label>
+                                            <input type="checkbox" id="prodEnableLowStock" onchange="toggleLowStockLimitInput()" class="w-4 h-4 text-emerald-600 rounded">
+                                        </div>
+                                        <div id="lowStockLimitContainer" class="hidden">
+                                            <label class="block text-xs font-semibold text-slate-600 mb-1">Límite mínimo de alerta</label>
+                                            <input type="number" id="prodLowStockLimit" min="1" value="3" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2 text-sm focus:outline-none focus:border-blue-600">
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-2 pt-2">
+                                        <button type="submit" id="saveProdBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl shadow transition text-sm">Guardar</button>
+                                        <button type="button" id="cancelEditProd" onclick="cancelEditProduct()" class="hidden bg-slate-300 hover:bg-slate-400 text-slate-800 font-semibold py-2.5 px-4 rounded-xl text-sm">Cancelar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm lg:col-span-2 space-y-6">
+                            <!-- RESUMEN DE CATÁLOGO Y EXISTENCIAS GENERALES (UBICADO ARRIBA DE LA TABLA) -->
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div class="bg-gradient-card-blue border border-blue-200/60 p-4 rounded-2xl shadow-sm flex items-center justify-between">
+                                    <div>
+                                        <p class="text-xs font-bold text-blue-800 uppercase tracking-wider">📦 Total Productos</p>
+                                        <p id="summaryTotalProducts" class="text-2xl font-black text-slate-900 mt-1">0</p>
+                                    </div>
+                                    <span class="text-2xl">📋</span>
+                                </div>
+                                <div class="bg-gradient-card-emerald border border-emerald-200/60 p-4 rounded-2xl shadow-sm flex items-center justify-between">
+                                    <div>
+                                        <p class="text-xs font-bold text-emerald-800 uppercase tracking-wider">📊 Stock General</p>
+                                        <p id="summaryTotalStock" class="text-2xl font-black text-slate-900 mt-1">0</p>
+                                    </div>
+                                    <span class="text-2xl">🔢</span>
+                                </div>
+                                <div class="bg-gradient-card-rose border border-rose-200/60 p-4 rounded-2xl shadow-sm flex items-center justify-between">
+                                    <div>
+                                        <p class="text-xs font-bold text-rose-800 uppercase tracking-wider">⚠️ Stock en Cero</p>
+                                        <p id="summaryZeroStock" class="text-2xl font-black text-slate-900 mt-1">0</p>
+                                    </div>
+                                    <span class="text-2xl">🔴</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
+                                    <h2 class="text-base font-bold text-slate-900">📦 Catálogo y Control de Existencias</h2>
+                                    <div class="w-full sm:w-auto">
+                                        <input type="text" id="searchInventoryInput" oninput="renderInventory()" placeholder="🔍 Buscar artículo..." class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600 w-full sm:w-64">
+                                    </div>
+                                </div>
+                                <div class="overflow-x-auto max-h-[450px] rounded-xl border border-slate-100">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr class="bg-gradient-blue text-white text-xs uppercase">
+                                                <th class="p-3">Producto / Servicio</th>
+                                                <th class="p-3">Categoría</th>
+                                                <th class="p-3 text-center">Stock</th>
+                                                <th class="p-3 text-right">Costo Unit. ($ / Bs)</th>
+                                                <th class="p-3 text-right">Precio Unit. ($ / Bs)</th>
+                                                <th class="p-3 text-right">Total Costo ($ / Bs)</th>
+                                                <th class="p-3 text-right">Total Precio ($ / Bs)</th>
+                                                <th class="p-3 text-center">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="inventoryTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. PURCHASES TAB -->
+                <div id="tab-purchases" class="tab-content space-y-6 hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm lg:col-span-1 space-y-4">
+                            <h2 id="purchasesFormTitle" class="text-base font-bold text-slate-900">🛒 Registrar Compra a Proveedor</h2>
+                            
+                            <form id="purchaseForm" onsubmit="processPurchase(event)" class="space-y-4">
+                                <input type="hidden" id="purchaseIndex" value="">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha de Registro</label>
+                                    <input type="date" id="purchaseDateInput" onchange="renderPurchaseCart()" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Proveedor</label>
+                                    <select id="purchaseSupplier" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600"></select>
+                                </div>
+
+                                <!-- DISEÑO IDÉNTICO A LA REFERENCIA PARA NUEVO PRODUCTO (JUSTO DESPUÉS DE SELECCIONAR PROVEEDOR) -->
+                                <div class="flex justify-between items-center bg-white border border-emerald-300 p-3 rounded-xl shadow-sm">
+                                    <span class="text-xs font-bold text-slate-700 uppercase">AGREGAR PRODUCTOS A LA COMPRA</span>
+                                    <button type="button" onclick="openQuickPurchaseModal()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1">
+                                        📦 + Nuevo Producto / Servicio
+                                    </button>
+                                </div>
+                                
+                                <div class="border-t border-slate-200 pt-3 space-y-3">
+                                    <h3 class="text-xs font-bold text-slate-700 uppercase">Buscar / Seleccionar Producto</h3>
+                                    <div>
+                                        <input type="text" id="purchaseProductInput" list="purchaseProductsList" oninput="onPurchaseProductInputChanged()" placeholder="Escribe para buscar o ingresar..." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                        <datalist id="purchaseProductsList"></datalist>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-600 mb-1">Cantidad</label>
+                                            <div class="flex items-center border border-slate-300 bg-slate-50 rounded-xl overflow-hidden">
+                                                <button type="button" onclick="adjustPurchaseQty(-1)" class="px-3 py-2 bg-slate-200 text-slate-700 font-bold hover:bg-slate-300">-</button>
+                                                <input type="number" id="purchaseQty" min="1" value="1" class="w-full text-center bg-transparent p-2 text-sm focus:outline-none font-bold">
+                                                <button type="button" onclick="adjustPurchaseQty(1)" class="px-3 py-2 bg-slate-200 text-slate-700 font-bold hover:bg-slate-300">+</button>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-600 mb-1">Costo Unit. ($)</label>
+                                            <input type="number" id="purchaseCostUSD" step="0.01" value="0.00" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                        </div>
+                                    </div>
+                                    <button type="button" onclick="addPurchaseCartItem()" class="w-full bg-slate-900 hover:bg-black text-white text-xs font-bold py-3 rounded-xl shadow transition">+ Añadir Producto a la Compra</button>
+                                </div>
+
+                                <div class="overflow-x-auto max-h-40 border border-slate-200 rounded-xl">
+                                    <table class="w-full text-left border-collapse text-xs">
+                                        <thead>
+                                            <tr class="bg-blue-50 text-blue-900">
+                                                <th class="p-2">Prod</th>
+                                                <th class="p-2 text-center">Cant</th>
+                                                <th class="p-2 text-right">Subtotal</th>
+                                                <th class="p-2 text-center">X</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="purchaseCartTableBody">
+                                            <tr><td colspan="4" class="p-3 text-center text-slate-400">Carrito vacío</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Tipo de Pago</label>
+                                    <select id="purchasePaymentMethod" onchange="togglePurchasePaymentFields()" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                        <option value="EFECTIVO">Efectivo</option>
+                                        <option value="TARJETA DEBITO">Tarjeta Débito</option>
+                                        <option value="TARJETA CREDITO">Tarjeta Crédito</option>
+                                        <option value="ZELLE">Zelle</option>
+                                        <option value="PAGO MOVIL">Pago Móvil</option>
+                                        <option value="ABONO">Abono (Parcial)</option>
+                                        <option value="CREDITO">Crédito (Por Cobrar)</option>
+                                    </select>
+                                </div>
+                                <div id="purchaseAbonoContainer" class="hidden">
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Monto Abonado / Inicial ($)</label>
+                                    <input type="number" id="purchaseAbonoAmount" step="0.01" value="0.00" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600" placeholder="Ej. 15.00">
+                                </div>
+                                <div class="bg-blue-50/70 p-3.5 rounded-xl border border-blue-100 text-sm space-y-1">
+                                    <div class="flex justify-between font-medium"><span>Total USD:</span><strong id="previewPurchaseTotalUSD" class="text-blue-700 font-bold">$0.00</strong></div>
+                                    <div class="flex justify-between font-medium"><span>Total Bs:</span><strong id="previewPurchaseTotalVES" class="text-emerald-600 font-bold">Bs. 0.00</strong></div>
+                                </div>
+                                <div class="flex gap-2 pt-2">
+                                    <button type="submit" id="savePurchaseBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl shadow transition text-sm">Registrar Compra</button>
+                                    <button type="button" id="cancelEditPurchase" onclick="cancelEditPurchase()" class="hidden bg-slate-300 hover:bg-slate-400 text-slate-800 font-semibold py-2.5 px-4 rounded-xl text-sm">Cancelar</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm lg:col-span-2">
+                            <h2 class="text-base font-bold text-slate-900 mb-4">📋 Historial de Compras</h2>
+                            <div class="overflow-x-auto max-h-[450px] rounded-xl border border-slate-100">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gradient-blue text-white text-xs uppercase">
+                                            <th class="p-3">Fecha / Tasa</th>
+                                            <th class="p-3">Proveedor</th>
+                                            <th class="p-3">Productos</th>
+                                            <th class="p-3 text-right">Sub Total ($ / Bs)</th>
+                                            <th class="p-3">Pago</th>
+                                            <th class="p-3 text-right">Total ($ / Bs)</th>
+                                            <th class="p-3 text-center">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="purchasesTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. CUENTAS POR PAGAR TAB -->
+                <div id="tab-payables" class="tab-content space-y-6 hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="bg-rose-50/60 border border-rose-200/80 p-5 rounded-2xl shadow-sm lg:col-span-1 space-y-4">
+                            <h2 class="text-base font-bold text-rose-900">📋 Registrar Abono / Pago a Proveedor</h2>
+                            <form onsubmit="processPayablePayment(event)" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-rose-800 mb-1">Seleccionar Deuda Pendiente</label>
+                                    <select id="payDebtSelect" required class="w-full bg-white border border-rose-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-rose-600"></select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-rose-800 mb-1">Monto a Pagar / Abonar ($)</label>
+                                    <input type="number" id="payPaymentAmount" step="0.01" required class="w-full bg-white border border-rose-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-rose-600" placeholder="0.00">
+                                </div>
+                                <button type="submit" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2.5 rounded-xl shadow transition text-sm">Registrar Pago</button>
+                            </form>
+                        </div>
+                        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm lg:col-span-2">
+                            <h2 class="text-base font-bold text-slate-900 mb-4">📋 Listado de Cuentas por Pagar (Créditos / Abonos Pendientes)</h2>
+                            <div class="overflow-x-auto max-h-[450px] rounded-xl border border-slate-100">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gradient-blue text-white text-xs uppercase">
+                                            <th class="p-3">Fecha / Tasa</th>
+                                            <th class="p-3">Proveedor</th>
+                                            <th class="p-3 text-right">Total ($ / Bs)</th>
+                                            <th class="p-3 text-right">Pagado ($ / Bs)</th>
+                                            <th class="p-3 text-right">Pendiente ($ / Bs)</th>
+                                            <th class="p-3 text-center">Estado</th>
+                                            <th class="p-3 text-center">Imprimir Comprobante</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="payablesTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. EXPENSES TAB -->
+                <div id="tab-expenses" class="tab-content space-y-6 hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                            <h2 id="expensesFormTitle" class="text-base font-bold text-slate-900 mb-4">💼 Registrar Gasto Operativo</h2>
+                            <form onsubmit="processExpense(event)" class="space-y-4">
+                                <input type="hidden" id="expenseIndex" value="">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha de Registro</label>
+                                    <input type="date" id="expenseDateInput" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Descripción del Gasto</label>
+                                    <input type="text" id="expenseDesc" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600" placeholder="Ej. Internet / Alquiler / Herramientas">
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 mb-1">Categoría</label>
+                                        <select id="expenseCategory" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                            <option value="OPERATIVO">OPERATIVO</option>
+                                            <option value="PUBLICIDAD">PUBLICIDAD</option>
+                                            <option value="TRANSPORTE">TRANSPORTE</option>
+                                            <option value="SERVICIOS">SERVICIOS</option>
+                                            <option value="OTRO">OTRO</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 mb-1">Monto ($)</label>
+                                        <input type="number" id="expenseAmountUSD" step="0.01" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                    </div>
+                                </div>
+                                <div class="flex gap-2 pt-2">
+                                    <button type="submit" id="saveExpenseBtn" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2.5 rounded-xl shadow transition text-sm">Registrar Gasto</button>
+                                    <button type="button" id="cancelEditExpense" onclick="cancelEditExpense()" class="hidden bg-slate-300 hover:bg-slate-400 text-slate-800 font-semibold py-2.5 px-4 rounded-xl text-sm">Cancelar</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm lg:col-span-2">
+                            <h2 class="text-base font-bold text-slate-900 mb-4">📋 Historial de Gastos</h2>
+                            <div class="overflow-x-auto max-h-[450px] rounded-xl border border-slate-100">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gradient-blue text-white text-xs uppercase">
+                                            <th class="p-3">Fecha / Tasa</th>
+                                            <th class="p-3">Descripción</th>
+                                            <th class="p-3">Categoría</th>
+                                            <th class="p-3 text-right">Monto ($ / Bs)</th>
+                                            <th class="p-3 text-center">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="expensesTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 8. CONTACTS TAB -->
+                <div id="tab-contacts" class="tab-content space-y-6 hidden">
+                    <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-sm">📥 Herramientas de Carga Masiva de Clientes (Excel)</h3>
+                            <p class="text-xs text-slate-500">Descarga la plantilla de clientes, complétala con la información y súbela para registrarlos masivamente.</p>
+                        </div>
+                        <div class="flex gap-2 w-full sm:w-auto">
+                            <button onclick="downloadClientsTemplate()" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow transition flex items-center justify-center gap-1.5">⬇️ Descargar Plantilla Clientes</button>
+                            <button onclick="document.getElementById('clientsExcelUploadInput').click()" class="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow transition flex items-center justify-center gap-1.5">📤 Cargar Archivo Excel</button>
+                            <input type="file" id="clientsExcelUploadInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleClientsExcelUpload(event)">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+                            <h2 id="clientFormTitle" class="text-base font-bold text-slate-900">👥 Registro de Clientes</h2>
+                            <form onsubmit="saveClient(event)" class="space-y-3">
+                                <input type="hidden" id="clientIndex" value="">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">1. Nombre / Razón Social <span class="text-rose-500">*</span></label>
+                                    <input type="text" id="clientNameInput" placeholder="Nombre del cliente..." required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 mb-1">2. RIF / Cédula <span class="text-slate-400 font-normal">(Opcional)</span></label>
+                                        <input type="text" id="clientRifInput" placeholder="Ej. V-12345678-9" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 mb-1">3. Teléfono <span class="text-slate-400 font-normal">(Opcional)</span></label>
+                                        <input type="text" id="clientPhoneInput" placeholder="Ej. 0412-1234567" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">4. Dirección <span class="text-slate-400 font-normal">(Opcional)</span></label>
+                                    <input type="text" id="clientAddressInput" placeholder="Ej. Av. Bolívar, Calle 5..." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                </div>
+                                <div class="flex gap-2 pt-1">
+                                    <button type="submit" id="saveClientBtn" class="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 shadow">Añadir Cliente</button>
+                                    <button type="button" id="cancelEditClient" onclick="cancelEditClient()" class="hidden bg-slate-300 hover:bg-slate-400 text-slate-800 font-semibold py-2.5 px-4 rounded-xl text-sm">Cancelar</button>
+                                </div>
+                            </form>
+
+                            <div class="overflow-x-auto max-h-72 rounded-xl border border-slate-100">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gradient-blue text-white text-xs uppercase">
+                                            <th class="p-2.5">1. Nombre</th>
+                                            <th class="p-2.5">2. RIF / Cédula</th>
+                                            <th class="p-2.5">3. Teléfono</th>
+                                            <th class="p-2.5">4. Dirección</th>
+                                            <th class="p-2.5 text-center">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="clientsTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- REGISTRO DE PROVEEDORES CON LOS 4 CAMPOS EXACTOS -->
+                        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+                            <h2 id="supplierFormTitle" class="text-base font-bold text-slate-900">🏢 Registro de Proveedores</h2>
+                            <form onsubmit="saveSupplier(event)" class="space-y-3">
+                                <input type="hidden" id="supplierIndex" value="">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">1. Nombre / Razón Social <span class="text-rose-500">*</span></label>
+                                    <input type="text" id="supplierNameInput" placeholder="Nombre del proveedor..." required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 mb-1">2. RIF / Cédula <span class="text-slate-400 font-normal">(Opcional)</span></label>
+                                        <input type="text" id="supplierRifInput" placeholder="Ej. J-30000000-1" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 mb-1">3. Teléfono <span class="text-slate-400 font-normal">(Opcional)</span></label>
+                                        <input type="text" id="supplierPhoneInput" placeholder="Ej. 0212-1234567" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">4. Dirección <span class="text-slate-400 font-normal">(Opcional)</span></label>
+                                    <input type="text" id="supplierAddressInput" placeholder="Ej. Zona Industrial..." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                                </div>
+                                <div class="flex gap-2 pt-1">
+                                    <button type="submit" id="saveSupplierBtn" class="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 shadow">Añadir Proveedor</button>
+                                    <button type="button" id="cancelEditSupplier" onclick="cancelEditSupplier()" class="hidden bg-slate-300 hover:bg-slate-400 text-slate-800 font-semibold py-2.5 px-4 rounded-xl text-sm">Cancelar</button>
+                                </div>
+                            </form>
+                            <div class="overflow-x-auto max-h-72 rounded-xl border border-slate-100">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gradient-blue text-white text-xs uppercase">
+                                            <th class="p-2.5">1. Nombre</th>
+                                            <th class="p-2.5">2. RIF / Cédula</th>
+                                            <th class="p-2.5">3. Teléfono</th>
+                                            <th class="p-2.5">4. Dirección</th>
+                                            <th class="p-2.5 text-center">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="suppliersTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- MODAL PARA NUEVO PRODUCTO DESDE COMPRAS -->
+    <div id="quickPurchaseModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-[420px] border border-slate-200 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-slate-800 text-base">📦 Nuevo Producto / Servicio</h3>
+                <button onclick="closeQuickPurchaseModal()" class="text-slate-400 hover:text-slate-700 font-bold text-lg">×</button>
+            </div>
+            <form onsubmit="saveQuickProductFromPurchaseModal(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Nombre del Producto / Servicio <span class="text-rose-500">*</span></label>
+                    <input type="text" id="qpName" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600" placeholder="Nombre...">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Categoría</label>
+                        <select id="qpCategory" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Stock Inicial</label>
+                        <input type="number" id="qpStock" min="0" value="0" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Costo ($)</label>
+                        <input type="number" id="qpCost" step="0.01" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Precio Venta ($)</label>
+                        <input type="number" id="qpPrice" step="0.01" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="border-t border-slate-200 pt-3 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-semibold text-slate-700">⚠️ Control de Stock Bajo</label>
+                        <input type="checkbox" id="qpEnableLowStock" checked class="w-4 h-4 text-emerald-600 rounded">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Límite mínimo de alerta</label>
+                        <input type="number" id="qpLowStockLimit" min="1" value="3" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2 text-sm focus:outline-none focus:border-blue-600">
+                    </div>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeQuickPurchaseModal()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 text-sm font-semibold py-2.5 rounded-xl transition">Cancelar</button>
+                    <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2.5 rounded-xl transition shadow">Guardar Producto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL PARA REGISTRAR CLIENTE RÁPIDO DESDE VENTAS -->
+    <div id="quickClientModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-96 border border-slate-200 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-slate-800 text-base">👥 Registrar Nuevo Cliente</h3>
+                <button onclick="closeQuickClientModal()" class="text-slate-400 hover:text-slate-700 font-bold text-lg">×</button>
+            </div>
+            <form onsubmit="saveQuickClient(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Nombre / Razón Social <span class="text-rose-500">*</span></label>
+                    <input type="text" id="quickClientName" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600" placeholder="Ej. Juan Pérez">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">RIF / Cédula <span class="text-slate-400 font-normal">(Opcional)</span></label>
+                    <input type="text" id="quickClientRif" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600" placeholder="Ej. V-12345678-9">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Teléfono <span class="text-slate-400 font-normal">(Opcional)</span></label>
+                    <input type="text" id="quickClientPhone" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600" placeholder="Ej. 0412-1234567">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Dirección <span class="text-slate-400 font-normal">(Opcional)</span></label>
+                    <input type="text" id="quickClientAddress" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-600" placeholder="Ej. Pampanito, Calle Central">
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeQuickClientModal()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 text-sm font-semibold py-2 rounded-xl transition">Cancelar</button>
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 rounded-xl transition shadow">Guardar y Seleccionar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 1. COMPROBANTE DE PAGO OPERATIVO -->
+    <div id="ticketPrintArea" class="hidden">
+        <div style="font-family: Arial, Helvetica, sans-serif; width: 300px; margin: 0 auto; color: #000; font-size: 11px; line-height: 1.3; padding: 5px; background: white;">
+            
+            <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 8px;">
+                <img src="logo.png" onerror="this.onerror=null; this.style.display='none';" alt="Logo" style="width: 75px; height: 75px; object-fit: contain; margin: 0 auto 6px auto; display: block;">
+                <h3 style="margin: 0; font-size: 13px; font-weight: bold; text-transform: uppercase;">CONSULTORIO TECNOLÓGICO</h3>
+                <p style="margin: 2px 0; font-size: 10px;">Rif: V-16463122-9</p>
+                <p style="margin: 2px 0; font-size: 10px;">Av. Bolívar, Pampanito Edo. Trujillo</p>
+                <p style="margin: 2px 0; font-size: 10px;">🟢 Tel / WhatsApp: 0412-1730396</p>
+            </div>
+
+            <div style="margin-bottom: 8px; font-size: 10px;">
+                <p style="margin: 2px 0;"><strong>COMPROBANTE:</strong> <span id="ticketType">TICKET DE VENTA</span></p>
+                <p style="margin: 2px 0;"><strong>Fecha:</strong> <span id="ticketDate"></span></p>
+                <p style="margin: 2px 0;"><strong id="ticketEntityLabel">Cliente:</strong> <span id="ticketClient"></span></p>
+                <p style="margin: 2px 0;"><strong>RIF / Cédula:</strong> <span id="ticketClientRif"></span></p>
+                <p style="margin: 2px 0;"><strong>Teléfono:</strong> <span id="ticketClientPhone"></span></p>
+                <p style="margin: 2px 0;"><strong>Dirección:</strong> <span id="ticketClientAddress"></span></p>
+                <p style="margin: 2px 0;" id="ticketRateRow"><strong>Tasa BCV:</strong> Bs. <span id="ticketRate"></span></p>
+            </div>
+
+            <!-- ALERTA DE PAGO PENDIENTE POR CRÉDITO -->
+            <div id="ticketCreditAlert" style="display: none; border: 1.5px dashed #b91c1c; background: #fef2f2; padding: 6px; text-align: center; margin-bottom: 8px; border-radius: 4px;">
+                <p style="margin: 0; font-size: 11px; font-weight: bold; color: #b91c1c; text-transform: uppercase;">⚠️ PAGO PENDIENTE (CRÉDITO)</p>
+                <p style="margin: 2px 0 0 0; font-size: 9px; color: #7f1d1d;">Esta transacción se encuentra registrada como cuenta pendiente.</p>
+            </div>
+
+            <!-- ALERTA DE CUENTA TOTALMENTE SALDADA / CERO PENDIENTE -->
+            <div id="ticketZeroBalanceAlert" style="display: none; border: 1.5px dashed #047857; background: #f0fdf4; padding: 6px; text-align: center; margin-bottom: 8px; border-radius: 4px;">
+                <p style="margin: 0; font-size: 11px; font-weight: bold; color: #047857; text-transform: uppercase;">✅ CUENTA SALDADA EN SU TOTALIDAD</p>
+                <p style="margin: 2px 0 0 0; font-size: 9px; color: #065f46;">No posee montos pendientes por pagar.</p>
+            </div>
+
+            <table style="width: 100% !important; border-top: 2px solid #000; border-bottom: 2px solid #000; margin-bottom: 8px; border-collapse: collapse; font-size: 10px;">
+                <thead>
+                    <tr style="border-bottom: 1px solid #000; font-weight: bold;">
+                        <th style="text-align: left; padding: 4px 0; width: 45%; white-space: nowrap;">CONCEPTO / PROD</th>
+                        <th style="text-align: center; padding: 4px 0; width: 15%; white-space: nowrap;">CANT.</th>
+                        <th style="text-align: right; padding: 4px 0; width: 20%; white-space: nowrap;">PRECIO</th>
+                        <th style="text-align: right; padding: 4px 0; width: 20%; white-space: nowrap;">TOTAL</th>
+                    </tr>
+                </thead>
+                <tbody id="ticketItemsBody"></tbody>
+            </table>
+
+            <div style="margin-top: 8px; font-size: 11px;">
+                <table style="width: 100%; font-weight: bold; margin-bottom: 8px;">
+                    <tr>
+                        <td style="text-align: left;">CANTIDAD DE ARTICULOS:</td>
+                        <td style="text-align: right; font-size: 12px;" id="ticketTotalItemsQty">0</td>
+                    </tr>
+                </table>
+
+                <div style="text-align: right; font-weight: bold;">
+                    <p style="margin: 2px 0;">SUBTOTAL: <span id="ticketSubtotalUSD">$0.00</span></p>
+                    
+                    <!-- SECCIÓN DINÁMICA PARA ABONOS Y PENDIENTES -->
+                    <div id="ticketAbonoSection" style="display: none; border-top: 1px dashed #000; margin-top: 4px; padding-top: 4px;">
+                        <p style="margin: 2px 0; color: #047857;">MONTO ABONADO: <span id="ticketAbonoUSD">$0.00</span></p>
+                        <!-- MONTO ABONADO EN BS (SOLO SE MUESTRA SI ES DESDE EL REGISTRO DE UN ABONO) -->
+                        <p id="ticketAbonoVesRow" style="margin: 2px 0; color: #047857; display: none;">MONTO ABONADO BS: <span id="ticketAbonoVES">Bs. 0.00</span></p>
+                        <p style="margin: 2px 0; color: #b91c1c;">PENDIENTE / RESTANTE: <span id="ticketRestanteUSD">$0.00</span></p>
+                    </div>
+
+                    <p style="margin: 5px 0 2px 0; font-size: 13px; font-weight: 900; border-top: 1px dashed #000; padding-top: 4px;">
+                        TOTAL: <span id="ticketTotalUSD">$0.00</span>
+                    </p>
+                    <!-- TOTAL BS: SE OCULTA AUTOMÁTICAMENTE SI ES CRÉDITO O ABONO RECIENTE O CXC/CXP -->
+                    <p style="margin: 2px 0; font-size: 11px; color: #000;" id="ticketTotalVesContainer">TOTAL BS: <strong id="ticketTotalVES">Bs. 0.00</strong></p>
+                    <p style="margin: 2px 0; font-size: 10px; font-weight: normal;">Estado Pago: <span id="ticketStatus">PAGADO</span></p>
+                </div>
+            </div>
+
+            <div style="text-align: center; border-top: 1px dashed #000; margin-top: 10px; padding-top: 8px; font-size: 10px;">
+                <p style="margin: 2px 0; font-weight: bold;">Consultorio Tecnológico es tu mejor opción</p>
+                <p style="margin: 2px 0;">¡Gracias por su preferencia!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. REPORTE INSTITUCIONAL (FACTURA PROFORMA) EN DÓLARES ($) -->
+    <div id="reportPrintArea" class="hidden">
+        <div style="font-family: Arial, sans-serif; width: 700px; margin: 0 auto; color: #000; font-size: 13px; line-height: 1.4; padding: 20px; background: white;">
+            <div style="position: relative; text-align: center; border-bottom: 2px solid #065f46; padding-bottom: 10px; margin-bottom: 15px;">
+                <div style="position: absolute; top: 0; right: 0; font-size: 12px; font-weight: bold; background: #f0fdf4; border: 1px solid #065f46; padding: 4px 8px; border-radius: 4px;">
+                    FECHA: <span id="reportPrintDate"></span>
+                </div>
+
+                <img src="logo.png" onerror="this.onerror=null; this.style.display='none';" alt="Logo" style="width: 75px; height: 75px; object-fit: contain; margin: 0 auto 6px auto; display: block;">
+                <h2 style="font-size: 18px; font-weight: bold; color: #065f46; margin: 0;">CONSULTORIO TECNOLÓGICO</h2>
+                <p style="font-size: 11px; margin: 2px 0;">Avenida Bolívar, Sector Centro - Municipio Pampanito Edo Trujillo</p>
+                <p style="font-size: 11px; font-weight: bold; margin: 2px 0;">Rif. V-16463122-9</p>
+                <p style="font-size: 10px; color: #555; margin: 2px 0;">Servicio Técnico, Reparación y Mantenimiento De Computadoras, Laptops, Impresoras y Equipos De Tecnología, Redes, Software, Compra y Venta de Accesorios Y Consumibles.</p>
+                <p style="font-size: 11px; margin: 2px 0;"><strong>Teléfono:</strong> 0416-9713146 / 🟢 0412-1730396 | <strong>E-mail:</strong> Consultoriotecnologico2015@gmail.com</p>
+                <p style="font-size: 11px; margin: 2px 0;"><strong>Redes:</strong> @consultoriotecl</p>
+                
+                <p style="font-size: 16px; font-weight: 900; color: #1e3a8a; margin: 12px 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">FACTURA PROFORMA</p>
+            </div>
+
+            <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 15px; border-radius: 6px; background: #f9fafb;">
+                <h4 style="font-size: 12px; font-weight: bold; color: #065f46; margin: 0 0 5px 0; text-transform: uppercase;">CLIENTE</h4>
+                <p style="margin: 2px 0;"><strong>Nombre:</strong> <span id="reportPrintClientName"></span></p>
+                <p style="margin: 2px 0;"><strong>Rif:</strong> <span id="reportPrintClientRif"></span></p>
+                <p style="margin: 2px 0;"><strong>Dirección:</strong> <span id="reportPrintClientAddress"></span></p>
+                <p style="margin: 2px 0;"><strong>Teléfono:</strong> <span id="reportPrintClientPhone"></span></p>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 12px; table-layout: fixed;">
+                <thead>
+                    <tr style="background: #065f46; color: white;">
+                        <th style="text-align: left; padding: 6px; border: 1px solid #065f46; width: 45%;">DESCRIPCION</th>
+                        <th style="text-align: center; padding: 6px; border: 1px solid #065f46; width: 15%;">CANT.</th>
+                        <th style="text-align: right; padding: 6px; border: 1px solid #065f46; width: 20%;">PRECIO UNIT</th>
+                        <th style="text-align: right; padding: 6px; border: 1px solid #065f46; width: 20%;">TOTAL</th>
+                    </tr>
+                </thead>
+                <tbody id="reportPrintItemsBody"></tbody>
+            </table>
+
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 10px;">
+                <div style="width: 55%; font-size: 11px; border: 1px solid #ddd; padding: 8px; border-radius: 4px; background: #fff;">
+                    <strong style="color: #065f46;">TÉRMINOS Y CONDICIONES</strong>
+                    <p style="margin: 4px 0 0 0; font-size: 10px;">• Transacción expresada en dólares americanos ($) Pagos recibidos en Bs calculados a la taza del BCV del dia del pago</p>
+                </div>
+                <div style="width: 40%; text-align: right; font-size: 12px;">
+                    <p style="margin: 3px 0;">Base imponible: <span id="reportPrintSubtotal" style="font-weight: bold;"></span></p>
+                    <p style="margin: 5px 0; font-size: 15px; font-weight: bold; color: #065f46; border-top: 1px solid #000; padding-top: 4px;">
+                        TOTAL: <span id="reportPrintTotal"></span>
+                    </p>
+                </div>
+            </div>
+
+            <div style="margin-top: 40px; display: flex; justify-content: center; font-size: 11px;">
+                <div style="text-align: center; width: 30%; border-top: 1px solid #000; padding-top: 5px;">
+                    <p style="margin: 0;">Firma Autorizada</p>
+                    <p style="margin: 5px 0 0 0; font-weight: bold;">Ing. Yuseth Viloria</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. REPORTE INSTITUCIONAL EN BOLÍVARES (BS) -->
+    <div id="reportVesPrintArea" class="hidden">
+        <div style="font-family: Arial, sans-serif; width: 700px; margin: 0 auto; color: #000; font-size: 13px; line-height: 1.4; padding: 20px; background: white;">
+            <div style="position: relative; text-align: center; border-bottom: 2px solid #065f46; padding-bottom: 10px; margin-bottom: 15px;">
+                <div style="position: absolute; top: 0; right: 0; font-size: 12px; font-weight: bold; background: #f0fdf4; border: 1px solid #065f46; padding: 4px 8px; border-radius: 4px;">
+                    FECHA: <span id="reportVesPrintDate"></span>
+                </div>
+
+                <img src="logo.png" onerror="this.onerror=null; this.style.display='none';" alt="Logo" style="width: 75px; height: 75px; object-fit: contain; margin: 0 auto 6px auto; display: block;">
+                <h2 style="font-size: 18px; font-weight: bold; color: #065f46; margin: 0;">CONSULTORIO TECNOLÓGICO</h2>
+                <p style="font-size: 11px; margin: 2px 0;">Avenida Bolívar, Sector Centro - Municipio Pampanito Edo Trujillo</p>
+                <p style="font-size: 11px; font-weight: bold; margin: 2px 0;">Rif. V-16463122-9</p>
+                <p style="font-size: 10px; color: #555; margin: 2px 0;">Servicio Técnico, Reparación y Mantenimiento De Computadoras, Laptops, Impresoras y Equipos De Tecnología, Redes, Software, Compra y Venta de Accesorios Y Consumibles.</p>
+                <p style="font-size: 11px; margin: 2px 0;"><strong>Teléfono:</strong> 0416-9713146 / 🟢 0412-1730396 | <strong>E-mail:</strong> Consultoriotecnologico2015@gmail.com</p>
+                <p style="font-size: 11px; margin: 2px 0;"><strong>Redes:</strong> @consultoriotecl</p>
+            </div>
+
+            <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 15px; border-radius: 6px; background: #f9fafb;">
+                <h4 style="font-size: 12px; font-weight: bold; color: #065f46; margin: 0 0 5px 0; text-transform: uppercase;">CLIENTE</h4>
+                <p style="margin: 2px 0;"><strong>Nombre:</strong> <span id="reportVesPrintClientName"></span></p>
+                <p style="margin: 2px 0;"><strong>Rif:</strong> <span id="reportVesPrintClientRif"></span></p>
+                <p style="margin: 2px 0;"><strong>Dirección:</strong> <span id="reportVesPrintClientAddress"></span></p>
+                <p style="margin: 2px 0;"><strong>Teléfono:</strong> <span id="reportVesPrintClientPhone"></span></p>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 12px; table-layout: fixed;">
+                <thead>
+                    <tr style="background: #065f46; color: white;">
+                        <th style="text-align: left; padding: 6px; border: 1px solid #065f46; width: 45%;">DESCRIPCION</th>
+                        <th style="text-align: center; padding: 6px; border: 1px solid #065f46; width: 15%;">CANT.</th>
+                        <th style="text-align: right; padding: 6px; border: 1px solid #065f46; width: 20%;">PRECIO UNIT (Bs.)</th>
+                        <th style="text-align: right; padding: 6px; border: 1px solid #065f46; width: 20%;">TOTAL (Bs.)</th>
+                    </tr>
+                </thead>
+                <tbody id="reportVesPrintItemsBody"></tbody>
+            </table>
+
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 10px;">
+                <div style="width: 50%; font-size: 11px; border: 1px solid #065f46; padding: 8px; border-radius: 4px; background: #f0fdf4;">
+                    <p style="margin: 0; font-weight: bold; color: #065f46;">TASA BCV APLICADA: Bs. <span id="reportVesPrintRate"></span> / $</p>
+                    <p style="margin: 4px 0 0 0; font-size: 10px; color: #047857;">• Transacción calculada según tasa oficial del día.</p>
+                </div>
+                <div style="width: 45%; text-align: right; font-size: 12px;">
+                    <p style="margin: 3px 0;">Base imponible: <span id="reportVesPrintSubtotal" style="font-weight: bold;"></span></p>
+                    <p style="margin: 3px 0;">I.V.A 16%: <span id="reportVesPrintIva" style="font-weight: bold;"></span></p>
+                    <p style="margin: 5px 0; font-size: 15px; font-weight: bold; color: #065f46; border-top: 1px solid #000; padding-top: 4px;">
+                        TOTAL: <span id="reportVesPrintTotal"></span>
+                    </p>
+                </div>
+            </div>
+
+            <div style="margin-top: 50px; display: flex; justify-content: center; font-size: 11px;">
+                <div style="text-align: center; width: 30%; border-top: 1px solid #000; padding-top: 5px;">
+                    <p style="margin: 0;">Firma Autorizada</p>
+                    <p style="margin: 5px 0 0 0; font-weight: bold;">Ing. Yuseth Viloria</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Application Logic -->
+    <script>
+        let state = {
+            bcvRate: 877.90,
+            bcvRatesHistory: [],
+            categories: ['HARDWARE', 'SOFTWARE', 'SERVICIOS', 'ACCESORIOS', 'GENERAL'],
+            clients: [
+                { name: 'Cliente General / Minorista', rif: 'V-00000000-0', phone: '0412-0000000', address: 'Pampanito' },
+                { name: 'Empresa Aliada C.A.', rif: 'J-30000000-1', phone: '0414-1234567', address: 'Valera, Edo. Trujillo' }
+            ],
+            suppliers: [
+                { name: 'Mayorista Tecnológico C.A.', rif: 'J-30001111-2', phone: '0212-5551234', address: 'Caracas, Distrito Capital' },
+                { name: 'Importadora Digital', rif: 'J-40002222-3', phone: '0424-9876543', address: 'Valencia, Edo. Carabobo' }
+            ],
+            inventory: [
+                { name: 'Licencia Antivirus Pro', category: 'SOFTWARE', stock: 25, cost: 3.50, price: 15.00, enableLowStock: true, lowStockLimit: 3 },
+                { name: 'Mantenimiento Preventivo PC', category: 'SERVICIOS', stock: 12, cost: 5.00, price: 25.00, enableLowStock: true, lowStockLimit: 3 },
+                { name: 'Cable HDMI 2 metros', category: 'ACCESORIOS', stock: 2, cost: 2.00, price: 6.00, enableLowStock: true, lowStockLimit: 3 }
+            ],
+            sales: [],
+            receivables: [],
+            payables: [],
+            purchases: [],
+            expenses: []
+        };
+
+        let currentCart = [];
+        let currentPurchaseCart = [];
+        let showAllSalesHistoryFlag = false;
+
+        function getLocalDateStr() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function formatDateNumeric(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
+        function formatDateLong(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+            const options = { day: 'numeric', month: 'long', year: 'numeric' };
+            return dateObj.toLocaleDateString('es-ES', options);
+        }
+
+        async function loadData() {
+            const saved = localStorage.getItem('consultorio_tecnologico_state');
+            if (saved) {
+                try { state = JSON.parse(saved); } catch (e) { console.error(e); }
+            }
+            if(!state.receivables) state.receivables = [];
+            if(!state.payables) state.payables = [];
+            if(!state.bcvRatesHistory) state.bcvRatesHistory = [];
+            if(!state.categories) state.categories = ['HARDWARE', 'SOFTWARE', 'SERVICIOS', 'ACCESORIOS', 'GENERAL'];
+
+            if (state.clients) {
+                state.clients = state.clients.map(c => ({
+                    name: c.name || '',
+                    rif: c.rif || 'S/R',
+                    phone: c.phone || 'S/N',
+                    address: c.address || 'N/A'
+                }));
+            }
+
+            if (state.suppliers) {
+                state.suppliers = state.suppliers.map(s => ({
+                    name: s.name || '',
+                    rif: s.rif || 'S/R',
+                    phone: s.phone || 'S/N',
+                    address: s.address || 'N/A'
+                }));
+            }
+
+            const todayStr = getLocalDateStr();
+            ['bcvHistDate', 'saleDateInput', 'purchaseDateInput', 'expenseDateInput'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && !el.value) el.value = todayStr;
+            });
+
+            const dateInput = document.getElementById('manualVesDate');
+            if (dateInput) dateInput.value = '';
+            const rateInput = document.getElementById('manualVesRate');
+            if (rateInput) rateInput.value = '';
+
+            if (state.bcvRate) {
+                const bcvHistInput = document.getElementById('bcvHistRate');
+                if (bcvHistInput) bcvHistInput.value = state.bcvRate.toFixed(2);
+            }
+            renderAll();
+        }
+
+        async function fetchOfficialBCVRate(showAlert = false) {
+            try {
+                const response = await fetch('https://rates.dolarvzla.com/bcv/current.json');
+                const data = await response.json();
+                let officialRate = 0;
+                if (data && data.current && data.current.usd) officialRate = parseFloat(data.current.usd);
+                else if (data && data.usd) officialRate = parseFloat(data.usd);
+
+                if (officialRate > 0) {
+                    document.getElementById('bcvHistRate').value = officialRate.toFixed(2);
+                    if (showAlert) alert(`🌐 Tasa oficial obtenida: Bs. ${officialRate.toFixed(2)}`);
+                }
+            } catch (error) {
+                if (showAlert) alert("No se pudo conectar con el servicio web.");
+            }
+        }
+
+        async function fetchManualVesRateWeb() {
+            try {
+                const response = await fetch('https://rates.dolarvzla.com/bcv/current.json');
+                const data = await response.json();
+                let officialRate = 0;
+                if (data && data.current && data.current.usd) officialRate = parseFloat(data.current.usd);
+                else if (data && data.usd) officialRate = parseFloat(data.usd);
+
+                if (officialRate > 0) {
+                    document.getElementById('manualVesRate').value = officialRate.toFixed(2);
+                    alert(`🌐 Tasa obtenida de la web: Bs. ${officialRate.toFixed(2)}`);
+                }
+            } catch (error) {
+                alert("No se pudo conectar con el servicio web.");
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('consultorio_tecnologico_state', JSON.stringify(state));
+            renderAll();
+        }
+
+        function resetData() {
+            if (confirm('¿Restaurar datos iniciales?')) {
+                localStorage.removeItem('consultorio_tecnologico_state');
+                location.reload();
+            }
+        }
+
+        function importDataFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    state = parsed.state ? parsed.state : parsed;
+                    saveData();
+                    alert("¡Datos restaurados!");
+                    location.reload();
+                } catch (err) { alert("Archivo no válido."); }
+                finally { event.target.value = ''; }
+            };
+            reader.readAsText(file);
+        }
+
+        function getRateForDate(dateStr) {
+            if (!dateStr) return state.bcvRate;
+            const found = state.bcvRatesHistory.find(h => h.date === dateStr);
+            return found ? found.rate : state.bcvRate;
+        }
+
+        function saveBCVHistory(e) {
+            e.preventDefault();
+            const date = document.getElementById('bcvHistDate').value;
+            const rate = parseFloat(document.getElementById('bcvHistRate').value);
+            if (!date || isNaN(rate)) return;
+            state.bcvRate = rate;
+            const existing = state.bcvRatesHistory.findIndex(h => h.date === date);
+            if (existing >= 0) state.bcvRatesHistory[existing].rate = rate;
+            else state.bcvRatesHistory.push({ date, rate });
+            state.bcvRatesHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+            saveData();
+            alert('¡Tasa guardada en historial!');
+        }
+
+        function deleteBCVHistory(index) {
+            if (confirm('¿Eliminar tasa?')) { state.bcvRatesHistory.splice(index, 1); saveData(); }
+        }
+
+        function renderBCVHistory() {
+            let html = '';
+            if (!state.bcvRatesHistory || state.bcvRatesHistory.length === 0) {
+                html = `<tr><td colspan="3" class="p-4 text-center text-slate-400">Sin tasas históricas.</td></tr>`;
+            } else {
+                state.bcvRatesHistory.forEach((item, idx) => {
+                    html += `<tr class="hover:bg-slate-50"><td class="p-3" style="white-space: nowrap;">${formatDateNumeric(item.date)}</td><td class="p-3 text-right font-bold text-emerald-600">Bs. ${Number(item.rate).toFixed(2)}</td><td class="p-3 text-center"><button type="button" onclick="deleteBCVHistory(${idx})" class="text-rose-600 text-xs">Eliminar</button></td></tr>`;
+                });
+            }
+            document.getElementById('bcvHistoryTableBody').innerHTML = html;
+        }
+
+        function saveCategory(e) {
+            e.preventDefault();
+            const input = document.getElementById('newCategoryInput');
+            const catName = input.value.trim().toUpperCase();
+            if (!catName || state.categories.includes(catName)) return;
+            state.categories.push(catName);
+            input.value = '';
+            saveData();
+        }
+
+        function deleteCategory(catName) {
+            if (state.categories.length <= 1) return;
+            if (confirm(`¿Eliminar categoría "${catName}"?`)) {
+                state.categories = state.categories.filter(c => c !== catName);
+                saveData();
+            }
+        }
+
+        function renderCategoriesManagement() {
+            let catOpts = `<option value="" disabled selected>Seleccione...</option>`;
+            let badgesHtml = '';
+            state.categories.forEach(cat => {
+                catOpts += `<option value="${cat}">${cat}</option>`;
+                badgesHtml += `<span class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs px-2.5 py-1 rounded-lg font-semibold border">${cat}<button type="button" onclick="deleteCategory('${cat}')" class="text-rose-500 font-bold ml-1">×</button></span>`;
+            });
+            document.getElementById('prodCategory').innerHTML = catOpts;
+            const qpCat = document.getElementById('qpCategory');
+            if (qpCat) qpCat.innerHTML = catOpts;
+            document.getElementById('categoryListContainer').innerHTML = badgesHtml;
+        }
+
+        function downloadInventoryTemplate() {
+            const ws = XLSX.utils.json_to_sheet([{ Nombre: "Mouse", Categoria: "ACCESORIOS", Stock: 15, Costo_USD: 5, Precio_USD: 12 }]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Inventario");
+            XLSX.writeFile(wb, "Plantilla_Inventario.xlsx");
+        }
+
+        function handleExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                rows.forEach(r => {
+                    const name = r.Nombre || r.producto;
+                    const cat = (r.Categoria || 'GENERAL').toUpperCase();
+                    const stock = parseInt(r.Stock || 0);
+                    const cost = parseFloat(r.Costo_USD || 0);
+                    const price = parseFloat(r.Precio_USD || 0);
+                    if (name) {
+                        if (!state.categories.includes(cat)) state.categories.push(cat);
+                        state.inventory.push({ name, category: cat, stock, cost, price, enableLowStock: true, lowStockLimit: 3 });
+                    }
+                });
+                saveData();
+                alert('¡Carga masiva exitosa!');
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function downloadClientsTemplate() {
+            const ws = XLSX.utils.json_to_sheet([{ Nombre: "Juan Pérez", Rif_CI: "V-12345678-9", Telefono: "0412-1234567", Direccion: "Pampanito" }]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Clientes");
+            XLSX.writeFile(wb, "Plantilla_Clientes.xlsx");
+        }
+
+        function handleClientsExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                rows.forEach(r => {
+                    const name = r.Nombre || r.cliente;
+                    const rif = (r.Rif_CI || 'S/R').toString();
+                    const phone = (r.Telefono || 'S/N').toString();
+                    const address = (r.Direccion || 'N/A').toString();
+                    if (name) state.clients.push({ name, rif, phone, address });
+                });
+                saveData();
+                alert('¡Clientes cargados con éxito!');
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function formatUSD(amt) { return '$' + Number(amt).toFixed(2); }
+        function formatVES(amt) { return 'Bs. ' + (Number(amt) * state.bcvRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        function formatHistoricalVES(amt, rate) { return 'Bs. ' + (Number(amt) * (rate || state.bcvRate)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        function formatDualCurrency(amt, rate) {
+            return `<div class="font-bold text-blue-600">${formatUSD(amt)}</div><div class="text-xs text-emerald-600">${formatHistoricalVES(amt, rate)}</div>`;
+        }
+
+        function switchTab(e, tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-emerald-600', 'text-white', 'shadow-md');
+                btn.classList.add('text-emerald-100', 'hover:bg-emerald-900/60', 'hover:text-white');
+            });
+            if (e && e.currentTarget) {
+                e.currentTarget.classList.remove('text-emerald-100', 'hover:bg-emerald-900/60', 'hover:text-white');
+                e.currentTarget.classList.add('bg-emerald-600', 'text-white', 'shadow-md');
+            }
+            if (tabId === 'dashboard') renderDashboard();
+            if (tabId === 'reportUSD') renderReportUSD();
+            if (tabId === 'reportVES') {
+                renderReportVES();
+                updateManualVesSaleDropdown();
+            }
+        }
+
+        function updateManualVesSaleDropdown() {
+            let saleOpts = '<option value="">Seleccione una venta registrada...</option>';
+            state.sales.forEach((s, idx) => {
+                saleOpts += `<option value="${idx}">Cliente: ${s.client} | Total $: $${Number(s.total).toFixed(2)} (${s.productsText || 'Venta general'})</option>`;
+            });
+            if (document.getElementById('manualVesSaleSelect')) {
+                document.getElementById('manualVesSaleSelect').innerHTML = saleOpts;
+            }
+        }
+
+        function renderAll() {
+            document.getElementById('bcvBadge').innerText = `Tasa BCV: Bs. ${state.bcvRate.toFixed(2)} / $`;
+            renderCategoriesManagement();
+            renderDashboard();
+            renderBCVHistory();
+            renderInventory();
+            renderSales();
+            renderReceivables();
+            renderPurchases();
+            renderPayables();
+            renderExpenses();
+            renderContacts();
+            renderReportUSD();
+            renderReportVES();
+            updateManualVesSaleDropdown();
+        }
+
+        let myChart = null;
+        function isDateInPeriod(dateStr, period) {
+            if (period === 'ALL') return true;
+            if (!dateStr) return false;
+            const targetDate = new Date(dateStr + 'T00:00:00');
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            if (period === 'DAILY') return targetDate.getTime() === today.getTime();
+            if (period === 'WEEKLY') {
+                const s = new Date(today); s.setDate(today.getDate() - 7);
+                return targetDate >= s && targetDate <= today;
+            }
+            if (period === 'MONTHLY') return targetDate.getMonth() === today.getMonth() && targetDate.getFullYear() === today.getFullYear();
+            return true;
+        }
+
+        function renderDashboard() {
+            const period = document.getElementById('dashboardPeriodSelect').value;
+            const sales = state.sales.filter(s => isDateInPeriod(s.date, period));
+            const purchases = state.purchases.filter(p => isDateInPeriod(p.date, period));
+            const expenses = state.expenses.filter(e => isDateInPeriod(e.date, period));
+
+            let sUSD = sales.reduce((a, b) => a + b.total, 0);
+            let sVES = sales.reduce((a, b) => a + (b.total * (b.bcvRate || state.bcvRate)), 0);
+            let pUSD = purchases.reduce((a, b) => a + b.total, 0);
+            let pVES = purchases.reduce((a, b) => a + (b.total * (b.bcvRate || state.bcvRate)), 0);
+            let eUSD = expenses.reduce((a, b) => a + b.amount, 0);
+            let eVES = expenses.reduce((a, b) => a + (b.amount * (b.bcvRate || state.bcvRate)), 0);
+
+            document.getElementById('kpiSalesUSD').innerText = formatUSD(sUSD);
+            document.getElementById('kpiSalesVES').innerText = 'Bs. ' + sVES.toLocaleString('es-VE', { minimumFractionDigits: 2 });
+            document.getElementById('kpiPurchasesUSD').innerText = formatUSD(pUSD);
+            document.getElementById('kpiPurchasesVES').innerText = 'Bs. ' + pVES.toLocaleString('es-VE', { minimumFractionDigits: 2 });
+            document.getElementById('kpiExpensesUSD').innerText = formatUSD(eUSD);
+            document.getElementById('kpiExpensesVES').innerText = 'Bs. ' + eVES.toLocaleString('es-VE', { minimumFractionDigits: 2 });
+            document.getElementById('kpiNetUSD').innerText = formatUSD(sUSD - pUSD - eUSD);
+            document.getElementById('kpiNetVES').innerText = 'Bs. ' + (sVES - pVES - eVES).toLocaleString('es-VE', { minimumFractionDigits: 2 });
+
+            const ctx = document.getElementById('financialChart').getContext('2d');
+            if (myChart) myChart.destroy();
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Ventas', 'Compras', 'Gastos', 'Utilidad Neta'],
+                    datasets: [{ data: [sUSD, pUSD, eUSD, sUSD - pUSD - eUSD], backgroundColor: ['#10b981', '#3b82f6', '#f43f5e', '#6366f1'], borderRadius: 8 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+
+        function renderReportUSD() {
+            const query = (document.getElementById('searchReportUSDInput').value || '').toLowerCase();
+            let html = '';
+            let filtered = state.sales.filter(s => s.client.toLowerCase().includes(query) || (s.productsText && s.productsText.toLowerCase().includes(query)));
+            if (filtered.length === 0) html = `<tr><td colspan="5" class="p-4 text-center text-slate-400">No se encontraron ventas.</td></tr>`;
+            else {
+                filtered.forEach(s => {
+                    const realIdx = state.sales.findIndex(item => item.id === s.id);
+                    html += `<tr class="hover:bg-slate-50"><td class="p-3" style="white-space: nowrap;">${formatDateNumeric(s.date)}</td><td class="p-3 font-bold">${s.client}</td><td class="p-3">${s.productsText || s.product}</td><td class="p-3 text-right font-black text-blue-600">${formatUSD(s.total)}</td><td class="p-3 text-center"><button type="button" onclick="printOfficialReport(${realIdx})" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold">🖨️ Imprimir Formato PDF</button></td></tr>`;
+                });
+            }
+            document.getElementById('reportUSDTableBody').innerHTML = html;
+        }
+
+        function renderReportVES() {
+            const query = (document.getElementById('searchReportVESInput').value || '').toLowerCase();
+            let html = '';
+            let filtered = state.sales.filter(s => s.client.toLowerCase().includes(query) || (s.productsText && s.productsText.toLowerCase().includes(query)));
+            if (filtered.length === 0) html = `<tr><td colspan="5" class="p-4 text-center text-slate-400">No hay ventas registradas.</td></tr>`;
+            else {
+                filtered.forEach(s => {
+                    const realIdx = state.sales.findIndex(item => item.id === s.id);
+                    const txRate = s.bcvRate || state.bcvRate;
+                    html += `<tr class="hover:bg-slate-50"><td class="p-3" style="white-space: nowrap;">${formatDateNumeric(s.date)} <small>(Tasa: ${txRate})</small></td><td class="p-3 font-bold">${s.client}</td><td class="p-3">${s.productsText || s.product}</td><td class="p-3 text-right font-black text-emerald-700">Bs. ${(s.total * txRate).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</td><td class="p-3 text-center"><button type="button" onclick="printOfficialVesReport(${realIdx})" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold">🖨️ Imprimir Formato PDF</button></td></tr>`;
+                });
+            }
+            document.getElementById('reportVESTableBody').innerHTML = html;
+        }
+
+        /* GENERADOR RÁPIDO DE REPORTE MANUAL EN BS (TASA, VENTA SELECCIONADA Y FECHA PERSONALIZADA) */
+        function printCustomManualVesReport() {
+            const customRate = parseFloat(document.getElementById('manualVesRate').value) || 0;
+            const saleIdx = document.getElementById('manualVesSaleSelect').value;
+            const customDate = document.getElementById('manualVesDate').value;
+
+            if (customRate <= 0 || saleIdx === '' || !customDate) {
+                alert('Por favor, ingresa una tasa válida, selecciona una venta y elige una fecha.');
+                return;
+            }
+
+            const sale = state.sales[saleIdx];
+            const clientObj = state.clients.find(c => c.name === sale.client) || { rif: 'V-00000000-0', address: 'Pampanito', phone: '0412-0000000' };
+
+            document.getElementById('reportVesPrintClientName').innerText = sale.client;
+            document.getElementById('reportVesPrintClientRif').innerText = clientObj.rif || 'V-00000000-0';
+            document.getElementById('reportVesPrintClientAddress').innerText = clientObj.address || 'Pampanito';
+            document.getElementById('reportVesPrintClientPhone').innerText = clientObj.phone || '0412-0000000';
+            document.getElementById('reportVesPrintDate').innerText = formatDateNumeric(customDate);
+            document.getElementById('reportVesPrintRate').innerText = Number(customRate).toFixed(2);
+
+            let itemsHtml = '';
+            let baseVesTotal = 0;
+            let ivaVesTotal = 0;
+            let totalVesGeneral = 0;
+
+            if (sale.items && sale.items.length > 0) {
+                sale.items.forEach(item => {
+                    const subtotalUsd = Number(item.subtotal);
+                    const itemBaseVes = subtotalUsd * customRate;
+                    const itemIvaVes = itemBaseVes * 0.16;
+                    const itemTotalVes = itemBaseVes + itemIvaVes;
+
+                    baseVesTotal += itemBaseVes;
+                    ivaVesTotal += itemIvaVes;
+                    totalVesGeneral += itemTotalVes;
+
+                    const unitBaseVes = Number(item.price) * customRate;
+
+                    itemsHtml += `
+                        <tr>
+                            <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: left; width: 45%;">${item.name}</td>
+                            <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: center; width: 15%;">${item.qty}</td>
+                            <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: right; width: 20%;">Bs. ${unitBaseVes.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: right; width: 20%; font-weight: bold;">Bs. ${itemBaseVes.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        </tr>`;
+                });
+            } else {
+                const totalVes = Number(sale.total) * customRate;
+                baseVesTotal = totalVes;
+                ivaVesTotal = baseVesTotal * 0.16;
+                totalVesGeneral = baseVesTotal + ivaVesTotal;
+
+                itemsHtml += `
+                    <tr>
+                        <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: left; width: 45%;">${sale.productsText || 'Servicio'}</td>
+                        <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: center; width: 15%;">1</td>
+                        <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: right; width: 20%;">Bs. ${totalVes.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: right; width: 20%; font-weight: bold;">Bs. ${baseVesTotal.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    </tr>`;
+            }
+
+            document.getElementById('reportVesPrintItemsBody').innerHTML = itemsHtml;
+            document.getElementById('reportVesPrintSubtotal').innerText = `Bs. ${baseVesTotal.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('reportVesPrintIva').innerText = `Bs. ${ivaVesTotal.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('reportVesPrintTotal').innerText = `Bs. ${totalVesGeneral.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            document.getElementById('reportVesPrintArea').classList.remove('hidden');
+            document.getElementById('reportPrintArea').classList.add('hidden');
+            document.getElementById('ticketPrintArea').classList.add('hidden');
+            window.print();
+        }
+
+        /* REPORTE INSTITUCIONAL (FACTURA PROFORMA) EXCLUSIVO EN USD CON LOGO */
+        function printOfficialReport(saleIndex) {
+            const sale = state.sales[saleIndex];
+            if (!sale) return;
+            const clientObj = state.clients.find(c => c.name === sale.client) || { rif: 'V-00000000-0', address: 'Pampanito', phone: '0412-0000000' };
+
+            document.getElementById('reportPrintClientName').innerText = sale.client;
+            document.getElementById('reportPrintClientRif').innerText = clientObj.rif || 'V-00000000-0';
+            document.getElementById('reportPrintClientAddress').innerText = clientObj.address || 'Pampanito';
+            document.getElementById('reportPrintClientPhone').innerText = clientObj.phone || '0412-0000000';
+            document.getElementById('reportPrintDate').innerText = formatDateNumeric(sale.date);
+
+            let itemsHtml = '';
+            if (sale.items && sale.items.length > 0) {
+                sale.items.forEach(item => {
+                    itemsHtml += `
+                        <tr>
+                            <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: left; width: 45%;">${item.name}</td>
+                            <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: center; width: 15%;">${item.qty}</td>
+                            <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: right; width: 20%;">$${Number(item.price).toFixed(2)}</td>
+                            <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: right; width: 20%; font-weight: bold;">$${Number(item.subtotal).toFixed(2)}</td>
+                        </tr>`;
+                });
+            } else {
+                itemsHtml = `
+                    <tr>
+                        <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: left; width: 45%;">${sale.productsText || 'Servicio'}</td>
+                        <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: center; width: 15%;">1</td>
+                        <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: right; width: 20%;">$${Number(sale.total).toFixed(2)}</td>
+                        <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: right; width: 20%; font-weight: bold;">$${Number(sale.total).toFixed(2)}</td>
+                    </tr>`;
+            }
+            document.getElementById('reportPrintItemsBody').innerHTML = itemsHtml;
+            document.getElementById('reportPrintSubtotal').innerText = `$${Number(sale.total).toFixed(2)}`;
+            document.getElementById('reportPrintTotal').innerText = `$${Number(sale.total).toFixed(2)}`;
+
+            document.getElementById('reportPrintArea').classList.remove('hidden');
+            document.getElementById('reportVesPrintArea').classList.add('hidden');
+            document.getElementById('ticketPrintArea').classList.add('hidden');
+            window.print();
+        }
+
+        /* REPORTE INSTITUCIONAL EN BS DESDE EL HISTORIAL */
+        function printOfficialVesReport(saleIndex) {
+            const sale = state.sales[saleIndex];
+            if (!sale) return;
+            const clientObj = state.clients.find(c => c.name === sale.client) || { rif: 'V-00000000-0', address: 'Pampanito', phone: '0412-0000000' };
+            const txRate = sale.bcvRate || state.bcvRate;
+
+            document.getElementById('reportVesPrintClientName').innerText = sale.client;
+            document.getElementById('reportVesPrintClientRif').innerText = clientObj.rif || 'V-00000000-0';
+            document.getElementById('reportVesPrintClientAddress').innerText = clientObj.address || 'Pampanito';
+            document.getElementById('reportVesPrintClientPhone').innerText = clientObj.phone || '0412-0000000';
+            document.getElementById('reportVesPrintDate').innerText = formatDateNumeric(sale.date);
+            document.getElementById('reportVesPrintRate').innerText = Number(txRate).toFixed(2);
+
+            let itemsHtml = '';
+            let baseVesTotal = 0;
+            let ivaVesTotal = 0;
+            let totalVesGeneral = 0;
+
+            if (sale.items && sale.items.length > 0) {
+                sale.items.forEach(item => {
+                    const subtotalUsd = Number(item.subtotal);
+                    const itemBaseVes = subtotalUsd * txRate;
+                    const itemIvaVes = itemBaseVes * 0.16;
+                    const itemTotalVes = itemBaseVes + itemIvaVes;
+
+                    baseVesTotal += itemBaseVes;
+                    ivaVesTotal += itemIvaVes;
+                    totalVesGeneral += itemTotalVes;
+
+                    const unitBaseVes = Number(item.price) * txRate;
+
+                    itemsHtml += `
+                        <tr>
+                            <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: left; width: 45%;">${item.name}</td>
+                            <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: center; width: 15%;">${item.qty}</td>
+                            <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: right; width: 20%;">Bs. ${unitBaseVes.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: right; width: 20%; font-weight: bold;">Bs. ${itemBaseVes.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        </tr>`;
+                });
+            } else {
+                const totalVes = Number(sale.total) * txRate;
+                baseVesTotal = totalVes;
+                ivaVesTotal = baseVesTotal * 0.16;
+                totalVesGeneral = baseVesTotal + ivaVesTotal;
+
+                itemsHtml += `
+                    <tr>
+                        <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: left; width: 45%;">${sale.productsText || 'Servicio'}</td>
+                        <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: center; width: 15%;">1</td>
+                        <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: right; width: 20%;">Bs. ${totalVes.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td style="padding: 6px; border-bottom: 1px solid #ddd; text-align: right; width: 20%; font-weight: bold;">Bs. ${baseVesTotal.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    </tr>`;
+            }
+
+            document.getElementById('reportVesPrintItemsBody').innerHTML = itemsHtml;
+            document.getElementById('reportVesPrintSubtotal').innerText = `Bs. ${baseVesTotal.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('reportVesPrintIva').innerText = `Bs. ${ivaVesTotal.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('reportVesPrintTotal').innerText = `Bs. ${totalVesGeneral.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            document.getElementById('reportVesPrintArea').classList.remove('hidden');
+            document.getElementById('reportPrintArea').classList.add('hidden');
+            document.getElementById('ticketPrintArea').classList.add('hidden');
+            window.print();
+        }
+
+        /* IMPRESIÓN DE TICKET OPERATIVO: DETECTA SI ES VENTA O COMPRA PARA MOSTRAR CLIENTE O PROVEEDOR */
+        function printOperationalTicket(title, date, entityName, txRate, items, totalUSD, paymentStatus, abonoAmount = 0, customRestante = null, isLiveAbono = false) {
+            document.getElementById('ticketType').innerText = title;
+            document.getElementById('ticketDate').innerText = formatDateNumeric(date);
+            document.getElementById('ticketClient').innerText = entityName;
+
+            // Identificar si es compra o venta para mostrar la etiqueta correcta (Proveedor vs Cliente)
+            const isPurchase = (title === 'COMPROBANTE DE COMPRA' || title === 'COMPROBANTE PAGO CXP');
+            document.getElementById('ticketEntityLabel').innerText = isPurchase ? 'Proveedor:' : 'Cliente:';
+
+            const entityList = isPurchase ? state.suppliers : state.clients;
+            const entityObj = entityList.find(e => e.name === entityName) || { rif: 'V-00000000-0', phone: '0412-0000000', address: 'N/A' };
+            
+            document.getElementById('ticketClientRif').innerText = entityObj.rif || 'S/R';
+            document.getElementById('ticketClientPhone').innerText = entityObj.phone || 'S/N';
+            document.getElementById('ticketClientAddress').innerText = entityObj.address || 'N/A';
+
+            document.getElementById('ticketRate').innerText = Number(txRate).toFixed(2);
+            
+            let itemsHtml = '';
+            let totalQtyCount = 0;
+
+            if (items && items.length > 0) {
+                items.forEach(item => {
+                    let qtyVal = parseInt(item.qty || 1);
+                    totalQtyCount += qtyVal;
+                    let priceVal = item.price !== undefined ? item.price : (item.cost !== undefined ? item.cost : 0);
+                    let subVal = item.subtotal !== undefined ? item.subtotal : (qtyVal * priceVal);
+                    
+                    itemsHtml += `
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td style="text-align: left; padding: 4px 0; width: 45%; word-break: break-word;">${item.name}</td>
+                            <td style="text-align: center; padding: 4px 0; width: 15%;">${qtyVal}</td>
+                            <td style="text-align: right; padding: 4px 0; width: 20%; white-space: nowrap;">$${Number(priceVal).toFixed(2)}</td>
+                            <td style="text-align: right; padding: 4px 0; width: 20%; font-weight: bold; white-space: nowrap;">$${Number(subVal).toFixed(2)}</td>
+                        </tr>`;
+                });
+            } else {
+                totalQtyCount = 1;
+                itemsHtml = `
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="text-align: left; padding: 4px 0; width: 45%;">Operación general</td>
+                        <td style="text-align: center; padding: 4px 0; width: 15%;">1</td>
+                        <td style="text-align: right; padding: 4px 0; width: 20%; white-space: nowrap;">$${Number(totalUSD).toFixed(2)}</td>
+                        <td style="text-align: right; padding: 4px 0; width: 20%; font-weight: bold; white-space: nowrap;">$${Number(totalUSD).toFixed(2)}</td>
+                    </tr>`;
+            }
+
+            document.getElementById('ticketItemsBody').innerHTML = itemsHtml;
+            document.getElementById('ticketTotalItemsQty').innerText = totalQtyCount;
+            
+            const isAbonoReceipt = (title === 'COMPROBANTE ABONO CXC' || title === 'COMPROBANTE PAGO CXP');
+            const abonoSection = document.getElementById('ticketAbonoSection');
+            const subtotalLine = document.getElementById('ticketSubtotalUSD').parentElement;
+            const totalQtyLine = document.getElementById('ticketTotalItemsQty').parentElement.parentElement;
+            const totalUsdLine = document.getElementById('ticketTotalUSD').parentElement;
+            const totalVesContainer = document.getElementById('ticketTotalVesContainer');
+            const creditAlert = document.getElementById('ticketCreditAlert');
+            const zeroBalanceAlert = document.getElementById('ticketZeroBalanceAlert');
+            const rateRow = document.getElementById('ticketRateRow');
+            const abonoVesRow = document.getElementById('ticketAbonoVesRow');
+
+            // Calcular pendiente actual si viene customRestante o evaluando el total vs abono
+            let restanteVal = customRestante !== null ? customRestante : (totalUSD - abonoAmount);
+            if (restanteVal < 0) restanteVal = 0;
+
+            // ALERTA CUANDO EL SALDO PENDIENTE ESTÁ EN CERO
+            if (restanteVal === 0 && (isAbonoReceipt || paymentStatus === 'PAGADO')) {
+                zeroBalanceAlert.style.display = 'block';
+            } else {
+                zeroBalanceAlert.style.display = 'none';
+            }
+
+            // ELIMINAR TOTAL EN BOLÍVARES EN COMPROBANTES DE CXC Y CXP SI NO ES EN VIVO
+            const isCxcCxpPayment = (title === 'COMPROBANTE ABONO CXC' || title === 'COMPROBANTE PAGO CXP');
+            if (isCxcCxpPayment && !isLiveAbono) {
+                totalVesContainer.style.display = 'none';
+            } else {
+                totalVesContainer.style.display = 'block';
+            }
+
+            if (isAbonoReceipt) {
+                totalQtyLine.style.display = 'none';
+                subtotalLine.style.display = 'none';
+                totalUsdLine.style.display = 'none';
+                if (!isLiveAbono) totalVesContainer.style.display = 'none';
+            } else {
+                totalQtyLine.style.display = 'table-row';
+                subtotalLine.style.display = 'block';
+                totalUsdLine.style.display = 'block';
+                document.getElementById('ticketSubtotalUSD').innerText = formatUSD(totalUSD);
+            }
+
+            let finalDisplayUSD = totalUSD;
+
+            // VALIDAR SI ES MODO DE PAGO CRÉDITO
+            const isCredit = (paymentStatus === 'CREDITO');
+
+            if (isCredit) {
+                creditAlert.style.display = 'block';
+                totalVesContainer.style.display = 'none';
+                rateRow.style.display = 'none';
+            } else {
+                creditAlert.style.display = 'none';
+                if (!isCxcCxpPayment || isLiveAbono) {
+                    totalVesContainer.style.display = 'block';
+                }
+                rateRow.style.display = 'block';
+            }
+
+            if ((paymentStatus === 'ABONO' || abonoAmount > 0) && !isAbonoReceipt && !isCredit) {
+                document.getElementById('ticketAbonoUSD').innerText = formatUSD(abonoAmount);
+                document.getElementById('ticketRestanteUSD').innerText = formatUSD(restanteVal);
+                
+                if (isLiveAbono) {
+                    document.getElementById('ticketAbonoVES').innerText = 'Bs. ' + (abonoAmount * txRate).toLocaleString('es-VE', { minimumFractionDigits: 2 });
+                    abonoVesRow.style.display = 'block';
+                } else {
+                    abonoVesRow.style.display = 'none';
+                }
+
+                abonoSection.style.display = 'block';
+                finalDisplayUSD = abonoAmount;
+            } else if (isAbonoReceipt) {
+                document.getElementById('ticketAbonoUSD').innerText = formatUSD(abonoAmount);
+                document.getElementById('ticketRestanteUSD').innerText = formatUSD(restanteVal);
+                
+                if (isLiveAbono) {
+                    document.getElementById('ticketAbonoVES').innerText = 'Bs. ' + (abonoAmount * txRate).toLocaleString('es-VE', { minimumFractionDigits: 2 });
+                    abonoVesRow.style.display = 'block';
+                } else {
+                    abonoVesRow.style.display = 'none';
+                }
+
+                abonoSection.style.display = 'block';
+            } else {
+                abonoSection.style.display = 'none';
+                abonoVesRow.style.display = 'none';
+            }
+
+            if (!isAbonoReceipt) {
+                document.getElementById('ticketTotalUSD').innerText = formatUSD(finalDisplayUSD);
+                if (!isCredit && (!isCxcCxpPayment || isLiveAbono)) {
+                    document.getElementById('ticketTotalVES').innerText = 'Bs. ' + (finalDisplayUSD * txRate).toLocaleString('es-VE', { minimumFractionDigits: 2 });
+                }
+            }
+            
+            document.getElementById('ticketStatus').innerText = paymentStatus;
+
+            document.getElementById('ticketPrintArea').classList.remove('hidden');
+            document.getElementById('reportPrintArea').classList.add('hidden');
+            document.getElementById('reportVesPrintArea').classList.add('hidden');
+            window.print();
+        }
+
+        function togglePaymentFields() {
+            const method = document.getElementById('salePaymentMethod').value;
+            document.getElementById('abonoFieldContainer').classList.toggle('hidden', method !== 'ABONO');
+        }
+
+        function togglePurchasePaymentFields() {
+            const method = document.getElementById('purchasePaymentMethod').value;
+            document.getElementById('purchaseAbonoContainer').classList.toggle('hidden', method !== 'ABONO');
+        }
+
+        function toggleLowStockLimitInput() {
+            const enabled = document.getElementById('prodEnableLowStock').checked;
+            document.getElementById('lowStockLimitContainer').classList.toggle('hidden', !enabled);
+        }
+
+        function openQuickPurchaseModal() {
+            document.getElementById('quickPurchaseModal').classList.remove('hidden');
+        }
+
+        function closeQuickPurchaseModal() {
+            document.getElementById('quickPurchaseModal').classList.add('hidden');
+        }
+
+        function saveQuickProductFromPurchaseModal(e) {
+            e.preventDefault();
+            const name = document.getElementById('qpName').value.trim();
+            const category = document.getElementById('qpCategory').value;
+            const stock = parseInt(document.getElementById('qpStock').value) || 0;
+            const cost = parseFloat(document.getElementById('qpCost').value) || 0;
+            const price = parseFloat(document.getElementById('qpPrice').value) || 0;
+            const enableLowStock = document.getElementById('qpEnableLowStock').checked;
+            const lowStockLimit = parseInt(document.getElementById('qpLowStockLimit').value) || 3;
+
+            if (!name || !category) return;
+
+            state.inventory.push({
+                name,
+                category,
+                stock,
+                cost,
+                price,
+                enableLowStock,
+                lowStockLimit
+            });
+
+            saveData();
+            closeQuickPurchaseModal();
+            document.getElementById('qpName').value = '';
+            document.getElementById('qpStock').value = 0;
+            document.getElementById('qpCost').value = '';
+            document.getElementById('qpPrice').value = '';
+            
+            document.getElementById('purchaseProductInput').value = name;
+            document.getElementById('purchaseCostUSD').value = cost;
+            alert(`⚠️ Producto "${name}" registrado con éxito y disponible en compras!`);
+        }
+
+        function adjustPurchaseQty(amt) {
+            const qtyInput = document.getElementById('purchaseQty');
+            let val = parseInt(qtyInput.value) || 1;
+            val += amt;
+            if (val < 1) val = 1;
+            qtyInput.value = val;
+        }
+
+        function adjustSaleQty(amt) {
+            const qtyInput = document.getElementById('saleQty');
+            let val = parseInt(qtyInput.value) || 1;
+            val += amt;
+            if (val < 1) val = 1;
+            qtyInput.value = val;
+        }
+
+        function calcProdBsPreview() {
+            const cost = parseFloat(document.getElementById('prodCost').value) || 0;
+            const price = parseFloat(document.getElementById('prodPrice').value) || 0;
+            document.getElementById('previewCostBs').innerText = formatVES(cost);
+            document.getElementById('previewPriceBs').innerText = formatVES(price);
+        }
+
+        function saveProduct(e) {
+            e.preventDefault();
+            const idx = document.getElementById('prodIndex').value;
+            const categoryVal = document.getElementById('prodCategory').value;
+            const enableLowStock = document.getElementById('prodEnableLowStock').checked;
+            const lowStockLimit = parseInt(document.getElementById('prodLowStockLimit').value) || 3;
+
+            const item = {
+                name: document.getElementById('prodName').value,
+                category: categoryVal,
+                stock: parseInt(document.getElementById('prodStock').value),
+                cost: parseFloat(document.getElementById('prodCost').value) || 0,
+                price: parseFloat(document.getElementById('prodPrice').value) || 0,
+                enableLowStock,
+                lowStockLimit
+            };
+            if (idx === "") state.inventory.push(item);
+            else state.inventory[idx] = item;
+            document.getElementById('inventoryForm').reset();
+            document.getElementById('lowStockLimitContainer').classList.add('hidden');
+            cancelEditProduct();
+            saveData();
+            alert('¡Producto guardado!');
+        }
+
+        function editProduct(idx) {
+            const p = state.inventory[idx];
+            document.getElementById('prodIndex').value = idx;
+            document.getElementById('prodName').value = p.name;
+            document.getElementById('prodCategory').value = p.category;
+            document.getElementById('prodStock').value = p.stock;
+            document.getElementById('prodCost').value = p.cost;
+            document.getElementById('prodPrice').value = p.price;
+            document.getElementById('prodEnableLowStock').checked = p.enableLowStock !== false;
+            document.getElementById('prodLowStockLimit').value = p.lowStockLimit || 3;
+            document.getElementById('lowStockLimitContainer').classList.toggle('hidden', !document.getElementById('prodEnableLowStock').checked);
+            
+            document.getElementById('invFormTitle').innerText = '✏️ Editar Producto';
+            document.getElementById('saveProdBtn').innerText = 'Actualizar';
+            document.getElementById('cancelEditProd').classList.remove('hidden');
+            calcProdBsPreview();
+        }
+
+        function cancelEditProduct() {
+            document.getElementById('prodIndex').value = "";
+            document.getElementById('inventoryForm').reset();
+            document.getElementById('lowStockLimitContainer').classList.add('hidden');
+            document.getElementById('invFormTitle').innerText = '📦 Nuevo Producto / Servicio';
+            document.getElementById('saveProdBtn').innerText = 'Guardar';
+            document.getElementById('cancelEditProd').classList.add('hidden');
+            calcProdBsPreview();
+        }
+
+        function adjustStock(idx, amt) {
+            state.inventory[idx].stock += amt;
+            if (state.inventory[idx].stock < 0) state.inventory[idx].stock = 0;
+            saveData();
+        }
+
+        function deleteProduct(idx) {
+            if (confirm('¿Eliminar?')) { state.inventory.splice(idx, 1); saveData(); }
+        }
+
+        function renderInventory() {
+            let html = '';
+            let tCost = 0, tPrice = 0;
+            let totalProductsCount = state.inventory.length;
+            let generalStockCount = 0;
+            let zeroStockCount = 0;
+
+            const searchQuery = (document.getElementById('searchInventoryInput') ? document.getElementById('searchInventoryInput').value : '').toLowerCase();
+            const filteredInventory = state.inventory.filter(p => p.name.toLowerCase().includes(searchQuery) || p.category.toLowerCase().includes(searchQuery));
+
+            if (state.inventory.length === 0) {
+                html = `<tr><td colspan="8" class="p-4 text-center">Sin inventario.</td></tr>`;
+            } else if (filteredInventory.length === 0) {
+                html = `<tr><td colspan="8" class="p-4 text-center text-slate-400">No se encontraron artículos con esa búsqueda.</td></tr>`;
+            } else {
+                state.inventory.forEach((p, idx) => {
+                    tCost += p.cost * p.stock;
+                    tPrice += p.price * p.stock;
+                    generalStockCount += p.stock;
+                    if (p.stock === 0) zeroStockCount++;
+                });
+
+                filteredInventory.forEach((p) => {
+                    const realIdx = state.inventory.findIndex(item => item.name === p.name && item.category === p.category);
+                    const limit = p.lowStockLimit || 3;
+                    const isLow = p.enableLowStock !== false && p.stock <= limit;
+
+                    let stockBadgeClass = isLow 
+                        ? 'bg-rose-100 text-rose-700 font-bold px-2 py-1 rounded-lg border border-rose-300 flex items-center justify-center gap-1' 
+                        : '';
+                    let stockWarning = isLow ? '⚠️ ' : '';
+
+                    html += `<tr class="hover:bg-slate-50">
+                        <td class="p-3 font-medium">${p.name}</td>
+                        <td class="p-3">${p.category}</td>
+                        <td class="p-3 text-center">
+                            <div class="${stockBadgeClass}">
+                                ${stockWarning}
+                                <button type="button" onclick="adjustStock(${realIdx}, -1)" class="px-1.5 bg-slate-200 rounded text-xs">-</button> 
+                                <span>${p.stock}</span> 
+                                <button type="button" onclick="adjustStock(${realIdx}, 1)" class="px-1.5 bg-slate-200 rounded text-xs">+</button>
+                            </div>
+                        </td>
+                        <td class="p-3 text-right">${formatUSD(p.cost)}</td>
+                        <td class="p-3 text-right">${formatUSD(p.price)}</td>
+                        <td class="p-3 text-right">${formatUSD(p.cost * p.stock)}</td>
+                        <td class="p-3 text-right">${formatUSD(p.price * p.stock)}</td>
+                        <td class="p-3 text-center">
+                            <button type="button" onclick="editProduct(${realIdx})" class="text-blue-600 text-xs font-semibold mr-2">Editar</button> 
+                            <button type="button" onclick="deleteProduct(${realIdx})" class="text-rose-600 text-xs font-semibold">Eliminar</button>
+                        </td>
+                    </tr>`;
+                });
+            }
+
+            document.getElementById('inventoryTableBody').innerHTML = html;
+            document.getElementById('summaryTotalProducts').innerText = totalProductsCount;
+            document.getElementById('summaryTotalStock').innerText = generalStockCount;
+            document.getElementById('summaryZeroStock').innerText = zeroStockCount;
+
+            document.getElementById('invTotalCostUSD').innerText = formatUSD(tCost);
+            document.getElementById('invTotalCostVES').innerText = formatVES(tCost);
+            document.getElementById('invTotalPriceUSD').innerText = formatUSD(tPrice);
+            document.getElementById('invTotalPriceVES').innerText = formatVES(tPrice);
+            updateDropdowns();
+        }
+
+        function updateDropdowns(selectedClientName = null) {
+            let clientOpts = `<option value="">Seleccione cliente...</option>`;
+            state.clients.forEach(c => clientOpts += `<option value="${c.name}" ${selectedClientName === c.name ? 'selected' : ''}>${c.name}</option>`);
+            if (document.getElementById('saleClient')) document.getElementById('saleClient').innerHTML = clientOpts;
+
+            let supOpts = `<option value="">Seleccione proveedor...</option>`;
+            state.suppliers.forEach(s => supOpts += `<option value="${s.name}">${s.name}</option>`);
+            if (document.getElementById('purchaseSupplier')) document.getElementById('purchaseSupplier').innerHTML = supOpts;
+
+            let prodOpts = '';
+            state.inventory.forEach(p => {
+                const limit = p.lowStockLimit || 3;
+                const isLow = p.enableLowStock !== false && p.stock <= limit;
+                let warningText = isLow ? ` ⚠️ [STOCK BAJO: ${p.stock}]` : ` (Stock: ${p.stock})`;
+                prodOpts += `<option value="${p.name}">${p.name}${warningText} | $${p.price.toFixed(2)}</option>`;
+            });
+            if (document.getElementById('saleProductsList')) document.getElementById('saleProductsList').innerHTML = prodOpts;
+            if (document.getElementById('purchaseProductsList')) document.getElementById('purchaseProductsList').innerHTML = prodOpts;
+
+            updateManualVesSaleDropdown();
+        }
+
+        function openQuickClientModal() { document.getElementById('quickClientModal').classList.remove('hidden'); }
+        function closeQuickClientModal() { document.getElementById('quickClientModal').classList.add('hidden'); }
+
+        function saveQuickClient(e) {
+            e.preventDefault();
+            const name = document.getElementById('quickClientName').value.trim();
+            const rif = document.getElementById('quickClientRif').value.trim() || 'S/R';
+            const phone = document.getElementById('quickClientPhone').value.trim() || 'S/N';
+            const address = document.getElementById('quickClientAddress').value.trim() || 'N/A';
+            if (!name) return;
+            state.clients.push({ name, rif, phone, address });
+            saveData();
+            closeQuickClientModal();
+            updateDropdowns(name);
+        }
+
+        function onSaleProductInputChanged() {
+            const val = document.getElementById('saleProductInput').value;
+            const p = state.inventory.find(i => i.name.toLowerCase() === val.toLowerCase());
+            const indicator = document.getElementById('posStockIndicator');
+            
+            if (p) {
+                document.getElementById('salePriceUSD').value = p.price;
+                const limit = p.lowStockLimit || 3;
+                const isLow = p.enableLowStock !== false && p.stock <= limit;
+
+                if (indicator) {
+                    indicator.innerText = `📦 Stock disponible: ${p.stock} unidades` + (isLow ? ' ⚠️ (Stock Bajo)' : '');
+                    indicator.className = isLow ? 'text-xs font-bold text-rose-600 mt-1 block' : 'text-xs font-semibold text-emerald-700 mt-1 block';
+                }
+            } else {
+                if (indicator) indicator.innerText = '';
+            }
+        }
+
+        function onPurchaseProductInputChanged() {
+            const val = document.getElementById('purchaseProductInput').value;
+            const p = state.inventory.find(i => i.name.toLowerCase() === val.toLowerCase());
+            if (p) document.getElementById('purchaseCostUSD').value = p.cost;
+        }
+
+        function addCartItem() {
+            const prodName = document.getElementById('saleProductInput').value.trim();
+            const qty = parseInt(document.getElementById('saleQty').value) || 0;
+            const price = parseFloat(document.getElementById('salePriceUSD').value) || 0;
+            const prodObj = state.inventory.find(i => i.name.toLowerCase() === prodName.toLowerCase());
+            
+            if (!prodObj || qty <= 0) {
+                alert('Selecciona un producto válido y una cantidad mayor a 0.');
+                return;
+            }
+
+            if (qty > prodObj.stock) {
+                alert(`⚠️ Stock insuficiente. Solo hay ${prodObj.stock} unidades disponibles de "${prodObj.name}".`);
+                return;
+            }
+
+            const prodIdx = state.inventory.findIndex(i => i.name.toLowerCase() === prodName.toLowerCase());
+            currentCart.push({ prodIdx, name: prodObj.name, qty, price, subtotal: qty * price });
+            renderCart();
+            document.getElementById('saleProductInput').value = '';
+            document.getElementById('saleQty').value = 1;
+            document.getElementById('salePriceUSD').value = '';
+            const indicator = document.getElementById('posStockIndicator');
+            if (indicator) indicator.innerText = '';
+        }
+
+        function removeCartItem(idx) { currentCart.splice(idx, 1); renderCart(); }
+
+        function renderCart() {
+            let html = '';
+            let total = 0;
+            const rate = getRateForDate(document.getElementById('saleDateInput').value);
+            currentCart.forEach((i, idx) => {
+                total += i.subtotal;
+                html += `<tr><td class="p-2">${i.name}</td><td class="p-2 text-center">${i.qty}</td><td class="p-2 text-right">$${i.subtotal.toFixed(2)}</td><td class="p-2 text-center"><button type="button" onclick="removeCartItem(${idx})">×</button></td></tr>`;
+            });
+            document.getElementById('cartTableBody').innerHTML = html || '<tr><td colspan="4" class="p-3 text-center">Carrito vacío</td></tr>';
+            document.getElementById('previewTotalUSD').innerText = formatUSD(total);
+            document.getElementById('previewTotalVES').innerText = 'Bs. ' + (total * rate).toLocaleString('es-VE', { minimumFractionDigits: 2 });
+        }
+
+        function addPurchaseCartItem() {
+            const prodName = document.getElementById('purchaseProductInput').value.trim();
+            const qty = parseInt(document.getElementById('purchaseQty').value) || 0;
+            const cost = parseFloat(document.getElementById('purchaseCostUSD').value) || 0;
+            const prodIdx = state.inventory.findIndex(i => i.name.toLowerCase() === prodName.toLowerCase());
+            if (prodIdx === -1 || qty <= 0) return;
+            currentPurchaseCart.push({ prodIdx, name: state.inventory[prodIdx].name, qty, cost, subtotal: qty * cost });
+            renderPurchaseCart();
+        }
+
+        function removePurchaseCartItem(idx) { currentPurchaseCart.splice(idx, 1); renderPurchaseCart(); }
+
+        function renderPurchaseCart() {
+            let html = '';
+            let total = 0;
+            const rate = getRateForDate(document.getElementById('purchaseDateInput').value);
+            currentPurchaseCart.forEach((i, idx) => {
+                total += i.subtotal;
+                html += `<tr><td class="p-2">${i.name}</td><td class="p-2 text-center">${i.qty}</td><td class="p-2 text-right">$${i.subtotal.toFixed(2)}</td><td class="p-2 text-center"><button type="button" onclick="removePurchaseCartItem(${idx})">×</button></td></tr>`;
+            });
+            document.getElementById('purchaseCartTableBody').innerHTML = html || '<tr><td colspan="4" class="p-3 text-center">Carrito vacío</td></tr>';
+            document.getElementById('previewPurchaseTotalUSD').innerText = formatUSD(total);
+            document.getElementById('previewPurchaseTotalVES').innerText = 'Bs. ' + (total * rate).toLocaleString('es-VE', { minimumFractionDigits: 2 });
+        }
+
+        function processSale(e) {
+            e.preventDefault();
+            const regDate = document.getElementById('saleDateInput').value;
+            const client = document.getElementById('saleClient').value;
+            const paymentMethod = document.getElementById('salePaymentMethod').value;
+            if (!regDate || !client || currentCart.length === 0) return;
+
+            const totalUSD = currentCart.reduce((a, b) => a + b.subtotal, 0);
+            let abonoAmountVal = 0;
+
+            if (paymentMethod === 'ABONO') {
+                abonoAmountVal = parseFloat(document.getElementById('saleAbonoAmount').value) || 0;
+                if (abonoAmountVal <= 0 || abonoAmountVal >= totalUSD) {
+                    alert('⚠️ Para el medio de pago "Abono", debes definir un monto abonado válido (mayor a 0 y menor al total de la venta).');
+                    return;
+                }
+            }
+
+            for (let item of currentCart) {
+                let invItem = state.inventory[item.prodIdx];
+                if (item.qty > invItem.stock) {
+                    alert(`⚠️ No se puede procesar la venta. El producto "${invItem.name}" excede el stock disponible (${invItem.stock} en inventario).`);
+                    return;
+                }
+            }
+
+            const rate = getRateForDate(regDate);
+            const productsText = currentCart.map(i => `${i.qty}x ${i.name} (Unit: $${i.price.toFixed(2)})`).join(', ');
+            const items = [...currentCart];
+
+            currentCart.forEach(i => state.inventory[i.prodIdx].stock -= i.qty);
+            const sale = { id: Date.now(), date: regDate, bcvRate: rate, client, items, productsText, total: totalUSD, paymentMethod };
+            state.sales.push(sale);
+
+            if (paymentMethod === 'CREDITO') {
+                state.receivables.push({ id: sale.id, date: regDate, bcvRate: rate, client, total: totalUSD, paid: 0, status: 'PENDIENTE' });
+            } else if (paymentMethod === 'ABONO') {
+                state.receivables.push({ id: sale.id, date: regDate, bcvRate: rate, client, total: totalUSD, paid: abonoAmountVal, status: abonoAmountVal >= totalUSD ? 'PAGADO' : 'PENDIENTE' });
+            }
+
+            currentCart = [];
+            renderCart();
+            document.getElementById('saleForm').reset();
+            document.getElementById('saleDateInput').value = regDate;
+            saveData();
+
+            if (confirm('¡Venta procesada! ¿Imprimir ticket operativo?')) {
+                printOperationalTicket('COMPROBANTE DE VENTA', regDate, client, rate, items, totalUSD, paymentMethod, abonoAmountVal);
+            }
+        }
+
+        function processPurchase(e) {
+            e.preventDefault();
+            const regDate = document.getElementById('purchaseDateInput').value;
+            const supplier = document.getElementById('purchaseSupplier').value;
+            const paymentMethod = document.getElementById('purchasePaymentMethod').value;
+            if (!regDate || !supplier || currentPurchaseCart.length === 0) return;
+
+            const totalUSD = currentPurchaseCart.reduce((a, b) => a + b.subtotal, 0);
+            let abonoAmountVal = 0;
+
+            if (paymentMethod === 'ABONO') {
+                abonoAmountVal = parseFloat(document.getElementById('purchaseAbonoAmount').value) || 0;
+                if (abonoAmountVal <= 0 || abonoAmountVal >= totalUSD) {
+                    alert('⚠️ Para el tipo de pago "Abono", debes ingresar un monto abonado válido (mayor a 0 y menor al total de la compra).');
+                    return;
+                }
+            }
+
+            const rate = getRateForDate(regDate);
+            const productsText = currentPurchaseCart.map(i => `${i.qty}x ${i.name}`).join(', ');
+            const items = currentPurchaseCart.map(i => ({
+                name: i.name,
+                qty: i.qty,
+                price: i.cost,
+                subtotal: i.subtotal
+            }));
+
+            currentPurchaseCart.forEach(i => {
+                if (state.inventory[i.prodIdx]) {
+                    state.inventory[i.prodIdx].stock += i.qty;
+                    state.inventory[i.prodIdx].cost = i.cost;
+                }
+            });
+
+            const p = { id: Date.now(), date: regDate, bcvRate: rate, supplier, items, productsText, total: totalUSD, paymentMethod };
+            state.purchases.push(p);
+
+            if (paymentMethod === 'CREDITO') {
+                state.payables.push({ id: p.id, date: regDate, bcvRate: rate, supplier, total: totalUSD, paid: 0, status: 'PENDIENTE' });
+            } else if (paymentMethod === 'ABONO') {
+                state.payables.push({ id: p.id, date: regDate, bcvRate: rate, supplier, total: totalUSD, paid: abonoAmountVal, status: abonoAmountVal >= totalUSD ? 'PAGADO' : 'PENDIENTE' });
+            }
+            
+            currentPurchaseCart = [];
+            renderPurchaseCart();
+            document.getElementById('purchaseForm').reset();
+            document.getElementById('purchaseDateInput').value = regDate;
+            saveData();
+            if (confirm('¿Imprimir comprobante?')) printPurchaseTicket(p);
+        }
+
+        function printSaleTicket(sale) {
+            let abonoVal = 0;
+            if (sale.paymentMethod === 'ABONO') {
+                const rec = state.receivables.find(r => r.id === sale.id);
+                if (rec) abonoVal = rec.paid;
+            }
+            printOperationalTicket('COMPROBANTE DE VENTA', sale.date, sale.client, sale.bcvRate || state.bcvRate, sale.items || [{name: sale.productsText, qty: 1, subtotal: sale.total}], sale.total, sale.paymentMethod, abonoVal);
+        }
+
+        function printPurchaseTicket(p) {
+            let abonoVal = 0;
+            if (p.paymentMethod === 'ABONO') {
+                const pay = state.payables.find(item => item.id === p.id);
+                if (pay) abonoVal = pay.paid;
+            }
+            const purchaseItems = p.items && p.items.length > 0 ? p.items : [{name: p.productsText || p.product, qty: 1, price: p.total, subtotal: p.total}];
+            printOperationalTicket('COMPROBANTE DE COMPRA', p.date, p.supplier, p.bcvRate || state.bcvRate, purchaseItems, p.total, p.paymentMethod || 'EFECTIVO', abonoVal);
+        }
+
+        function printReceivablePaymentTicket(debt, paymentAmt) {
+            let pending = debt.total - debt.paid;
+            let items = [
+                { name: 'Deuda Total Original', qty: 1, subtotal: debt.total },
+                { name: 'Total Acumulado Pagado', qty: 1, subtotal: debt.paid }
+            ];
+            printOperationalTicket('COMPROBANTE ABONO CXC', getLocalDateStr(), debt.client, debt.bcvRate || state.bcvRate, items, debt.total, 'ABONO', paymentAmt, pending, true);
+        }
+
+        function printPayablePaymentTicket(debt, paymentAmt) {
+            let pending = debt.total - debt.paid;
+            let items = [
+                { name: 'Deuda Total Original', qty: 1, subtotal: debt.total },
+                { name: 'Total Acumulado Pagado', qty: 1, subtotal: debt.paid }
+            ];
+            printOperationalTicket('COMPROBANTE PAGO CXP', getLocalDateStr(), debt.supplier, debt.bcvRate || state.bcvRate, items, debt.total, 'ABONO', paymentAmt, pending, true);
+        }
+
+        function deleteSale(idx) {
+            if (confirm('¿Estás seguro de eliminar esta venta? Los productos volverán al inventario.')) {
+                const sale = state.sales[idx];
+                
+                // Reponer stock al inventario
+                if (sale.items && sale.items.length > 0) {
+                    sale.items.forEach(cartItem => {
+                        let invItem = state.inventory.find(i => i.name.toLowerCase() === cartItem.name.toLowerCase());
+                        if (invItem) {
+                            invItem.stock += cartItem.qty;
+                        }
+                    });
+                }
+                
+                // Eliminar deuda en Cuentas por Cobrar si existía
+                if (sale.id) {
+                    state.receivables = state.receivables.filter(r => r.id !== sale.id);
+                }
+
+                state.sales.splice(idx, 1);
+                saveData();
+                alert('¡Venta eliminada y stock devuelto al inventario con éxito!');
+            }
+        }
+
+        function toggleAllSalesHistory() {
+            showAllSalesHistoryFlag = !showAllSalesHistoryFlag;
+            document.getElementById('toggleSalesHistoryBtn').innerText = showAllSalesHistoryFlag ? "Ver Solo Ventas de Hoy" : "Ver Historial Completo";
+            renderSales();
+        }
+
+        function renderSales() {
+            let html = '';
+            const today = getLocalDateStr();
+            const list = showAllSalesHistoryFlag ? state.sales : state.sales.filter(s => s.date === today);
+            if (list.length === 0) html = `<tr><td colspan="7" class="p-4 text-center">Sin ventas.</td></tr>`;
+            else {
+                list.forEach(s => {
+                    const realIdx = state.sales.findIndex(i => i.id === s.id);
+                    const rate = s.bcvRate || state.bcvRate;
+                    
+                    let detailedProducts = s.productsText || s.product;
+                    if (s.items && s.items.length > 0) {
+                        detailedProducts = s.items.map(i => `${i.qty}x ${i.name} <span class="text-xs text-blue-600 font-semibold">(Unit: $${i.price.toFixed(2)})</span>`).join('<br>');
+                    }
+
+                    html += `<tr class="hover:bg-slate-50">
+                        <td class="p-3" style="white-space: nowrap;">${formatDateNumeric(s.date)}</td>
+                        <td class="p-3 font-bold">${s.client}</td>
+                        <td class="p-3 text-xs leading-relaxed">${detailedProducts}</td>
+                        <td class="p-3 text-right">${formatDualCurrency(s.total, rate)}</td>
+                        <td class="p-3">${s.paymentMethod}</td>
+                        <td class="p-3 text-right">${formatDualCurrency(s.total, rate)}</td>
+                        <td class="p-3 text-center">
+                            <button type="button" onclick="printSaleTicket(state.sales[${realIdx}])" class="text-emerald-600 text-xs font-bold">🖨️ Ticket</button> 
+                            <button type="button" onclick="deleteSale(${realIdx})" class="text-rose-600 text-xs">Eliminar</button>
+                        </td>
+                    </tr>`;
+                });
+            }
+            document.getElementById('salesTableBody').innerHTML = html;
+        }
+
+        function processReceivablePayment(e) {
+            e.preventDefault();
+            const val = document.getElementById('recDebtSelect').value;
+            const amt = parseFloat(document.getElementById('recPaymentAmount').value) || 0;
+            const debt = state.receivables.find(r => r.id == val);
+            if (debt) {
+                debt.paid += amt;
+                if (debt.paid >= debt.total) { debt.paid = debt.total; debt.status = 'PAGADO'; }
+                
+                // Limpiar el campo de monto a abonar dejándolo en blanco
+                document.getElementById('recPaymentAmount').value = '';
+
+                saveData();
+                if (confirm('¿Imprimir ticket de abono?')) printReceivablePaymentTicket(debt, amt);
+            }
+        }
+
+        function renderReceivables() {
+            let html = '', opts = `<option value="">Seleccione deuda...</option>`;
+            state.receivables.filter(r => r.status !== 'PAGADO').forEach(d => opts += `<option value="${d.id}">${d.client} - Restante: $${(d.total - d.paid).toFixed(2)}</option>`);
+            document.getElementById('recDebtSelect').innerHTML = opts;
+
+            if (state.receivables.length === 0) html = `<tr><td colspan="7" class="p-4 text-center">Sin deudas.</td></tr>`;
+            else {
+                state.receivables.forEach((r, idx) => {
+                    const pending = r.total - r.paid;
+                    const rate = r.bcvRate || state.bcvRate;
+                    html += `<tr class="hover:bg-slate-50">
+                        <td class="p-3" style="white-space: nowrap;">${formatDateNumeric(r.date)}</td>
+                        <td class="p-3 font-bold">${r.client}</td>
+                        <td class="p-3 text-right">${formatDualCurrency(r.total, rate)}</td>
+                        <td class="p-3 text-right">${formatDualCurrency(r.paid, rate)}</td>
+                        <td class="p-3 text-right font-black text-rose-600">${formatDualCurrency(pending, rate)}</td>
+                        <td class="p-3 text-center">${r.status}</td>
+                        <td class="p-3 text-center"><button type="button" onclick="printOperationalTicket('COMPROBANTE ABONO CXC', getLocalDateStr(), state.receivables[${idx}].client, state.receivables[${idx}].bcvRate || state.bcvRate, [{ name: 'Deuda Total Original', qty: 1, subtotal: state.receivables[${idx}].total }, { name: 'Total Acumulado Pagado', qty: 1, subtotal: state.receivables[${idx}].paid }], state.receivables[${idx}].total, 'ABONO', state.receivables[${idx}].paid, state.receivables[${idx}].total - state.receivables[${idx}].paid, false)" class="text-amber-600 text-xs font-bold">🖨️ Ticket</button></td>
+                    </tr>`;
+                });
+            }
+            document.getElementById('receivablesTableBody').innerHTML = html;
+        }
+
+        function processPayablePayment(e) {
+            e.preventDefault();
+            const val = document.getElementById('payDebtSelect').value;
+            const amt = parseFloat(document.getElementById('payPaymentAmount').value) || 0;
+            const debt = state.payables.find(p => p.id == val);
+            if (debt) {
+                debt.paid += amt;
+                if (debt.paid >= debt.total) { debt.paid = debt.total; debt.status = 'PAGADO'; }
+                
+                // Limpiar el campo de monto a pagar dejándolo en blanco
+                document.getElementById('payPaymentAmount').value = '';
+
+                saveData();
+                if (confirm('¿Imprimir ticket de pago?')) printPayablePaymentTicket(debt, amt);
+            }
+        }
+
+        function renderPayables() {
+            let html = '', opts = `<option value="">Seleccione cuenta...</option>`;
+            state.payables.filter(p => p.status !== 'PAGADO').forEach(d => opts += `<option value="${d.id}">${d.supplier} - Restante: $${(d.total - d.paid).toFixed(2)}</option>`);
+            document.getElementById('payDebtSelect').innerHTML = opts;
+
+            if (state.payables.length === 0) html = `<tr><td colspan="7" class="p-4 text-center">Sin cuentas.</td></tr>`;
+            else {
+                state.payables.forEach((p, idx) => {
+                    const pending = p.total - p.paid;
+                    const rate = p.bcvRate || state.bcvRate;
+                    html += `<tr class="hover:bg-slate-50">
+                        <td class="p-3" style="white-space: nowrap;">${formatDateNumeric(p.date)}</td>
+                        <td class="p-3 font-bold">${p.supplier}</td>
+                        <td class="p-3 text-right">${formatDualCurrency(p.total, rate)}</td>
+                        <td class="p-3 text-right">${formatDualCurrency(p.paid, rate)}</td>
+                        <td class="p-3 text-right font-black text-rose-600">${formatDualCurrency(pending, rate)}</td>
+                        <td class="p-3 text-center">${p.status}</td>
+                        <td class="p-3 text-center"><button type="button" onclick="printOperationalTicket('COMPROBANTE PAGO CXP', getLocalDateStr(), state.payables[${idx}].supplier, state.payables[${idx}].bcvRate || state.bcvRate, [{ name: 'Deuda Total Original', qty: 1, subtotal: state.payables[${idx}].total }, { name: 'Total Acumulado Pagado', qty: 1, subtotal: state.payables[${idx}].paid }], state.payables[${idx}].total, 'ABONO', state.payables[${idx}].paid, state.payables[${idx}].total - state.payables[${idx}].paid, false)" class="text-emerald-600 text-xs font-bold">🖨️ Ticket</button></td>
+                    </tr>`;
+                });
+            }
+            document.getElementById('payablesTableBody').innerHTML = html;
+        }
+
+        function deletePurchase(idx) {
+            if (confirm('¿Eliminar?')) { state.purchases.splice(idx, 1); saveData(); }
+        }
+
+        function renderPurchases() {
+            let html = '';
+            if (state.purchases.length === 0) html = `<tr><td colspan="7" class="p-4 text-center">Sin compras.</td></tr>`;
+            else {
+                state.purchases.forEach((p, idx) => {
+                    const rate = p.bcvRate || state.bcvRate;
+                    html += `<tr class="hover:bg-slate-50"><td class="p-3" style="white-space: nowrap;">${formatDateNumeric(p.date)}</td><td class="p-3 font-bold">${p.supplier}</td><td class="p-3">${p.productsText || p.product}</td><td class="p-3 text-right">${formatDualCurrency(p.total, rate)}</td><td class="p-3">${p.paymentMethod}</td><td class="p-3 text-right">${formatDualCurrency(p.total, rate)}</td><td class="p-3 text-center"><button type="button" onclick="printPurchaseTicket(state.purchases[${idx}])" class="text-emerald-600 text-xs">🖨️ Ticket</button> <button type="button" onclick="deletePurchase(${idx})" class="text-rose-600 text-xs">Eliminar</button></td></tr>`;
+                });
+            }
+            document.getElementById('purchasesTableBody').innerHTML = html;
+        }
+
+        function processExpense(e) {
+            e.preventDefault();
+            const regDate = document.getElementById('expenseDateInput').value;
+            const desc = document.getElementById('expenseDesc').value;
+            const cat = document.getElementById('expenseCategory').value;
+            const amt = parseFloat(document.getElementById('expenseAmountUSD').value);
+            state.expenses.push({ date: regDate, bcvRate: getRateForDate(regDate), desc, category: cat, amount: amt });
+            document.getElementById('expenseForm').reset();
+            saveData();
+            alert('¡Gasto registrado!');
+        }
+
+        function deleteExpense(idx) {
+            if (confirm('¿Eliminar?')) { state.expenses.splice(idx, 1); saveData(); }
+        }
+
+        function renderExpenses() {
+            let html = '';
+            if (state.expenses.length === 0) html = `<tr><td colspan="5" class="p-4 text-center">Sin gastos.</td></tr>`;
+            else {
+                state.expenses.forEach((ex, idx) => {
+                    html += `<tr class="hover:bg-slate-50"><td class="p-3" style="white-space: nowrap;">${formatDateNumeric(ex.date)}</td><td class="p-3">${ex.desc}</td><td class="p-3">${ex.category}</td><td class="p-3 text-right">${formatDualCurrency(ex.amount, ex.bcvRate)}</td><td class="p-3 text-center"><button type="button" onclick="deleteExpense(${idx})" class="text-rose-600 text-xs">Eliminar</button></td></tr>`;
+                });
+            }
+            document.getElementById('expensesTableBody').innerHTML = html;
+        }
+
+        /* GESTIÓN Y EDICIÓN DE CLIENTES */
+        function saveClient(e) {
+            e.preventDefault();
+            const idx = document.getElementById('clientIndex').value;
+            const name = document.getElementById('clientNameInput').value.trim();
+            const rif = document.getElementById('clientRifInput').value.trim() || 'S/R';
+            const phone = document.getElementById('clientPhoneInput').value.trim() || 'S/N';
+            const address = document.getElementById('clientAddressInput').value.trim() || 'N/A';
+            if (!name) return;
+
+            const clientData = { name, rif, phone, address };
+            if (idx === "") {
+                state.clients.push(clientData);
+                alert('¡Cliente añadido!');
+            } else {
+                state.clients[idx] = clientData;
+                alert('¡Cliente actualizado!');
+            }
+            cancelEditClient();
+            saveData();
+        }
+
+        function editClient(idx) {
+            const c = state.clients[idx];
+            document.getElementById('clientIndex').value = idx;
+            document.getElementById('clientNameInput').value = c.name;
+            document.getElementById('clientRifInput').value = c.rif;
+            document.getElementById('clientPhoneInput').value = c.phone;
+            document.getElementById('clientAddressInput').value = c.address;
+            document.getElementById('clientFormTitle').innerText = '✏️ Editar Cliente';
+            document.getElementById('saveClientBtn').innerText = 'Actualizar Cliente';
+            document.getElementById('cancelEditClient').classList.remove('hidden');
+        }
+
+        function cancelEditClient() {
+            document.getElementById('clientIndex').value = '';
+            document.getElementById('clientNameInput').value = '';
+            document.getElementById('clientRifInput').value = '';
+            document.getElementById('clientPhoneInput').value = '';
+            document.getElementById('clientAddressInput').value = '';
+            document.getElementById('clientFormTitle').innerText = '👥 Registro de Clientes';
+            document.getElementById('saveClientBtn').innerText = 'Añadir Cliente';
+            document.getElementById('cancelEditClient').classList.add('hidden');
+        }
+
+        function deleteClient(idx) {
+            if (state.clients.length <= 1) return;
+            state.clients.splice(idx, 1);
+            saveData();
+        }
+
+        /* GESTIÓN Y EDICIÓN DE PROVEEDORES */
+        function saveSupplier(e) {
+            e.preventDefault();
+            const idx = document.getElementById('supplierIndex').value;
+            const name = document.getElementById('supplierNameInput').value.trim();
+            const rif = document.getElementById('supplierRifInput').value.trim() || 'S/R';
+            const phone = document.getElementById('supplierPhoneInput').value.trim() || 'S/N';
+            const address = document.getElementById('supplierAddressInput').value.trim() || 'N/A';
+            if (!name) return;
+
+            const supplierData = { name, rif, phone, address };
+            if (idx === "") {
+                state.suppliers.push(supplierData);
+                alert('¡Proveedor añadido!');
+            } else {
+                state.suppliers[idx] = supplierData;
+                alert('¡Proveedor actualizado!');
+            }
+            cancelEditSupplier();
+            saveData();
+        }
+
+        function editSupplier(idx) {
+            const s = state.suppliers[idx];
+            document.getElementById('supplierIndex').value = idx;
+            document.getElementById('supplierNameInput').value = s.name;
+            document.getElementById('supplierRifInput').value = s.rif;
+            document.getElementById('supplierPhoneInput').value = s.phone;
+            document.getElementById('supplierAddressInput').value = s.address;
+            document.getElementById('supplierFormTitle').innerText = '✏️ Editar Proveedor';
+            document.getElementById('saveSupplierBtn').innerText = 'Actualizar Proveedor';
+            document.getElementById('cancelEditSupplier').classList.remove('hidden');
+        }
+
+        function cancelEditSupplier() {
+            document.getElementById('supplierIndex').value = '';
+            document.getElementById('supplierNameInput').value = '';
+            document.getElementById('supplierRifInput').value = '';
+            document.getElementById('supplierPhoneInput').value = '';
+            document.getElementById('supplierAddressInput').value = '';
+            document.getElementById('supplierFormTitle').innerText = '🏢 Registro de Proveedores';
+            document.getElementById('saveSupplierBtn').innerText = 'Añadir Proveedor';
+            document.getElementById('cancelEditSupplier').classList.add('hidden');
+        }
+
+        function deleteSupplier(idx) {
+            if (state.suppliers.length <= 1) return;
+            state.suppliers.splice(idx, 1);
+            saveData();
+        }
+
+        function renderContacts() {
+            let cH = '';
+            state.clients.forEach((c, idx) => {
+                cH += `<tr class="hover:bg-slate-50">
+                    <td class="p-2.5 font-medium">${c.name}</td>
+                    <td class="p-2.5">${c.rif}</td>
+                    <td class="p-2.5">${c.phone}</td>
+                    <td class="p-2.5">${c.address}</td>
+                    <td class="p-2.5 text-center">
+                        <button type="button" onclick="editClient(${idx})" class="text-blue-600 text-xs font-semibold mr-2">Editar</button>
+                        <button type="button" onclick="deleteClient(${idx})" class="text-rose-600 text-xs font-semibold">Eliminar</button>
+                    </td>
+                </tr>`;
+            });
+            document.getElementById('clientsTableBody').innerHTML = cH;
+
+            let sH = '';
+            state.suppliers.forEach((s, idx) => {
+                sH += `<tr class="hover:bg-slate-50">
+                    <td class="p-2.5 font-medium">${s.name}</td>
+                    <td class="p-2.5">${s.rif}</td>
+                    <td class="p-2.5">${s.phone}</td>
+                    <td class="p-2.5">${s.address}</td>
+                    <td class="p-2.5 text-center">
+                        <button type="button" onclick="editSupplier(${idx})" class="text-blue-600 text-xs font-semibold mr-2">Editar</button>
+                        <button type="button" onclick="deleteSupplier(${idx})" class="text-rose-600 text-xs font-semibold">Eliminar</button>
+                    </td>
+                </tr>`;
+            });
+            document.getElementById('suppliersTableBody').innerHTML = sH;
+        }
+
+        function exportAllDataAsTxt() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+            const dl = document.createElement('a');
+            dl.setAttribute("href", dataStr);
+            dl.setAttribute("download", "consultorio_tecnologico_respaldo.txt");
+            document.body.appendChild(dl);
+            dl.click();
+            dl.remove();
+        }
+    </script>
+</body>
+</html>
